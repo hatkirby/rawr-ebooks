@@ -11,3 +11,23 @@
 *.lai
 *.la
 *.a
+
+# Mac stuff
+.DS_Store
+
+# Automake stuff
+Makefile.in
+aclocal.m4
+autom4te.cache
+configure
+.deps
+config.log
+config.status
+missing
+install-sh
+depcomp
+Makefile
+
+# Actual binary
+rawr-ebooks
+rawr-ebooks.exe
