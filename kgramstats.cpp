@@ -76,7 +76,7 @@ vector<string> kgramstats::randomSentence(int n)
 	
 	for (int i=0; i<n; i++)
 	{
-		if ((rand() % 4) != 0)
+		if ((rand() % (maxK - cur.size() + 1)) == 0)
 		{
 			for (int i=0; i<cur.size(); i++)
 			{
@@ -124,14 +124,20 @@ vector<string> kgramstats::randomSentence(int n)
 		{
 			nextToken += ".";
 		}
-		
-		cout << next->first << " | " << nextToken << endl;
 
 		if (cur.size() == maxK)
 		{
 			cur.pop_front();
 		}
-
+		
+		/* DEBUG */
+		for (kgram::iterator it = cur.begin(); it != cur.end(); it++)
+		{
+			cout << *it << " ";
+		}
+		
+		cout << "-> \"" << nextToken << "\" (" << next->second->all << "/" << max << ")" << endl;
+		
 		cur.push_back(next->first);
 		result.push_back(nextToken);
 	}
