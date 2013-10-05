@@ -21,7 +21,7 @@ kgramstats::kgramstats(string corpus, int maxK)
 	   start = ((end > (string::npos - 1) ) ? string::npos : end + 1);
 	}
 	
-	stats = new map<kgram, map<string, token_data*>* >();
+	map<kgram, map<string, token_data*>* > tstats;
 	for (int k=0; k<=maxK; k++)
 	{
 		for (int i=0; i<(tokens.size() - k); i++)
@@ -31,17 +31,18 @@ kgramstats::kgramstats(string corpus, int maxK)
 			string f = tokens[i+k];
 			string canonical = canonize(f);
 			
-			if ((*stats)[seq] == NULL)
+			if (tstats[seq] == NULL)
 			{
-				(*stats)[seq] = new map<string, token_data*>();
+				tstats[seq] = new map<string, token_data*>();
 			}
 			
-			if ((*(*stats)[seq])[canonical] == NULL)
+			if ((*tstats[seq])[canonical] == NULL)
 			{
-				(*(*stats)[seq])[canonical] = (token_data*) calloc(1, sizeof(token_data));
+				(*tstats[seq])[canonical] = (token_data*) calloc(1, sizeof(token_data));
 			}
 
-			token_data* td = stats->at(seq)->at(canonical);
+			token_data* td = tstats[seq]->at(canonical);
+			td->token = new string(canonical);
 			td->all++;
 			
 			if ((f.length() > 0) && (f[f.length()-1] == '.'))
@@ -57,6 +58,24 @@ kgramstats::kgramstats(string corpus, int maxK)
 				td->titlecase++;
 			}
 		}
+	}
+	
+	stats = new map<kgram, map<int, token_data*>* >();
+	for (map<kgram, map<string, token_data*>* >::iterator it = tstats.begin(); it != tstats.end(); it++)
+	{
+		kgram klist = it->first;
+		map<string, token_data*>* probtable = it->second;
+		map<int, token_data*>* distribution = new map<int, token_data*>();
+        int max = 0;
+		
+		for (map<string, token_data*>::iterator kt = probtable->begin(); kt != probtable->end(); kt++)
+		{
+			max += kt->second->all;
+			
+			(*distribution)[max] = kt->second;
+		}
+		
+		(*stats)[klist] = distribution;
 	}
 }
 
@@ -89,38 +108,23 @@ vector<string> kgramstats::randomSentence(int n)
 			}
 		}
 
-		map<string, token_data*>* probtable = (*stats)[cur];
-		int max = 0;
-		for (map<string, token_data*>::iterator it = probtable->begin(); it != probtable->end(); ++it)
-		{
-			max += it->second->all;
-		}
+		map<int, token_data*> distribution = *(*stats)[cur];
+		int max = distribution.rbegin()->first;
+		int r = rand() % max;
+		token_data* next = distribution.upper_bound(r)->second;
 
-		int r = rand() % (max+1);
-		map<string, token_data*>::iterator next = probtable->begin();
-		for (map<string, token_data*>::iterator it = probtable->begin(); it != probtable->end(); ++it)
-		{
-			if (it->second->all > r)
-			{
-				break;
-			} else {
-				next = it;
-				r -= it->second->all;
-			}
-		}
-
-		string nextToken(next->first);
-		int casing = rand() % next->second->all;
-		int period = rand() % next->second->all;
-		if (casing < next->second->uppercase)
+		string nextToken(*(next->token));
+		int casing = rand() % next->all;
+		int period = rand() % next->all;
+		if (casing < next->uppercase)
 		{
 			transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
-		} else if ((casing - next->second->uppercase) < next->second->titlecase)
+		} else if ((casing - next->uppercase) < next->titlecase)
 		{
 			nextToken[0] = toupper(nextToken[0]);
 		}
 		
-		if (period < next->second->period)
+		if (period < next->period)
 		{
 			nextToken += ".";
 		}
@@ -136,9 +140,9 @@ vector<string> kgramstats::randomSentence(int n)
 			cout << *it << " ";
 		}
 		
-		cout << "-> \"" << nextToken << "\" (" << next->second->all << "/" << max << ")" << endl;
+		cout << "-> \"" << nextToken << "\" (" << next->all << "/" << max << ")" << endl;
 		
-		cur.push_back(next->first);
+		cur.push_back(*(next->token));
 		result.push_back(nextToken);
 	}
 	

@@ -23,9 +23,10 @@ private:
 		int titlecase;
 		int uppercase;
 		int period;
+		string* token;
 	} token_data;
 	int maxK;
-	map<kgram, map<string, token_data*>* >* stats;
+	map<kgram, map<int, token_data*>* >* stats;
 };
 
 void printKgram(kgram k);
