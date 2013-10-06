@@ -17,19 +17,19 @@ int main(int argc, char** args)
 {
 	srand(time(NULL));
 	
-	YAML::Node config = YAML::LoadFile("config.yml");
-	
+	YAML::Node config = YAML::LoadFile("config.yml");	
+	ifstream infile(config["corpus"].as<std::string>().c_str());
+	string corpus;
+	string line;
+	while (getline(infile, line))
+	{
+		corpus += " " + line;
+	}
+
+	kgramstats* stats = new kgramstats(corpus, 5);
+
 	for (;;)
 	{
-		ifstream infile(config["corpus"].as<std::string>().c_str());
-		string corpus;
-		string line;
-		while (getline(infile, line))
-		{
-			corpus += " " + line;
-		}
-
-		kgramstats* stats = new kgramstats(corpus, 5);
 		vector<string> doc = stats->randomSentence(rand() % 25 + 5);
 		string hi;
 		for (vector<string>::iterator it = doc.begin(); it != doc.end(); ++it)
