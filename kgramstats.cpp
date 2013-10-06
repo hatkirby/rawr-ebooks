@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <algorithm>
 
+// runs in O(t^2) time where t is the number of tokens in the input corpus
+// We consider maxK to be fairly constant
 kgramstats::kgramstats(string corpus, int maxK)
 {
 	this->maxK = maxK;
@@ -16,7 +18,11 @@ kgramstats::kgramstats(string corpus, int maxK)
 	{
 	   end = corpus.find(" ", start);
 
-	   tokens.push_back(corpus.substr(start, (end == string::npos) ? string::npos : end - start));
+       string token = corpus.substr(start, (end == string::npos) ? string::npos : end - start);
+       if (token.compare(""))
+       {
+           tokens.push_back(token);
+       }
 
 	   start = ((end > (string::npos - 1) ) ? string::npos : end + 1);
 	}
@@ -85,9 +91,9 @@ void printKgram(kgram k)
 	{
 		cout << *it << " ";
 	}
-	cout << endl;
 }
 
+// runs in O(n log t) time where n is the input number of sentences and t is the number of tokens in the input corpus
 vector<string> kgramstats::randomSentence(int n)
 {
 	vector<string> result;
