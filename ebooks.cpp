@@ -26,8 +26,10 @@ int main(int argc, char** args)
 		corpus += " " + line;
 	}
 
+    cout << "Preprocessing corpus..." << endl;
 	kgramstats* stats = new kgramstats(corpus, 5);
 
+    cout << "Generating..." << endl;
 	for (;;)
 	{
 		vector<string> doc = stats->randomSentence(rand() % 25 + 5);
