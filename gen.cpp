@@ -7,18 +7,34 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <unistd.h>
-#include <yaml-cpp/yaml.h>
 
 using namespace::std;
 
 int main(int argc, char** args)
 {
 	srand(time(NULL));
-	
-	YAML::Node config = YAML::LoadFile("config.yml");
-	
-	ifstream infile(config["corpus"].as<std::string>().c_str());
+    
+    if (argc == 1)
+    {
+        cout << "rawr-gen, version 1.0" << endl;
+        cout << "Usage: rawr-gen corpus-file" << endl;
+        cout << "  where 'corpus-file' is the path to your input" << endl;
+        
+        return 0;
+    }
+    
+	ifstream infile(args[1]);
+    if (!infile)
+    {
+        cout << "rawr-gen, version 1.0" << endl;
+        cout << "Usage: rawr-gen corpus-file" << endl;
+        cout << "  where 'corpus-file' is the path to your input" << endl;
+        cout << endl;
+        cout << "The file you specified does not exist." << endl;
+        
+        return 0;
+    }
+    
 	string corpus;
 	string line;
 	while (getline(infile, line))
