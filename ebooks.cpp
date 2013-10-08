@@ -19,7 +19,7 @@ int main(int argc, char** args)
 	srand(time(NULL));
 	
 	YAML::Node config = YAML::LoadFile("config.yml");
-    int delay = config["corpus"].as<int>();
+    int delay = config["delay"].as<int>();
 
 	ifstream infile(config["corpus"].as<std::string>().c_str());
 	string corpus;
