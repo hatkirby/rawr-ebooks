@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include "freevars.h"
 
 using namespace::std;
 
@@ -45,6 +46,11 @@ int main(int argc, char** args)
     cout << "Preprocessing corpus..." << endl;
 	kgramstats* stats = new kgramstats(corpus, 5);
     
+    cout << "Preprocessing freevars..." << endl;
+    freevars* vars = new freevars();
+    vars->addVar("name", "names.txt");
+    vars->addVar("noun", "nouns.txt");
+    
     cout << "Generating..." << endl;
 	for (;;)
 	{
@@ -52,7 +58,7 @@ int main(int argc, char** args)
 		string hi;
 		for (vector<string>::iterator it = doc.begin(); it != doc.end(); ++it)
 		{
-			hi += *it + " ";
+			hi += vars->parse(*it) + " ";
 		}
 
 		cout << hi << endl;
