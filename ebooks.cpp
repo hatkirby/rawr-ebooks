@@ -18,7 +18,9 @@ int main(int argc, char** args)
 {
 	srand(time(NULL));
 	
-	YAML::Node config = YAML::LoadFile("config.yml");	
+	YAML::Node config = YAML::LoadFile("config.yml");
+    int delay = config["corpus"].as<int>();
+
 	ifstream infile(config["corpus"].as<std::string>().c_str());
 	string corpus;
 	string line;
@@ -168,7 +170,7 @@ int main(int argc, char** args)
 	        printf( "\ntwitterClient:: twitCurl::statusUpdate error:\n%s\n", replyMsg.c_str() );
 	    }
 
-		sleep(900);
+		sleep(delay);
 	}
 	
 	return 0;

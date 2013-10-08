@@ -31,3 +31,5 @@ Makefile
 # Actual binary
 rawr-ebooks
 rawr-ebooks.exe
+rawr-gen
+rawr-gen.exe
