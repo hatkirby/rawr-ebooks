@@ -18,4 +18,4 @@ private:
     map<string, vector<string>* >* vars;
 };
 
-#endif FREEVARS_H
+#endif

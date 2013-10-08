@@ -1,5 +1,6 @@
 #include "freevars.h"
 #include <fstream>
+#include <cstdlib>
 
 freevars::freevars()
 {
