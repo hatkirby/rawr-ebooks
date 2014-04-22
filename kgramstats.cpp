@@ -105,7 +105,7 @@ vector<string> kgramstats::randomSentence(int n)
 		{
 			for (int i=0; i<cur.size(); i++)
 			{
-				if ((rand() % 3) != 0)
+				if ((rand() % 3) == 0)
 				{
 					cur.pop_front();
 				} else {
