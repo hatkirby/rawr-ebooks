@@ -23,6 +23,11 @@ private:
 		int titlecase;
 		int uppercase;
 		int period;
+    int startquote;
+    int endquote;
+    int startparen;
+    int endparen;
+    int comma;
 		string* token;
 	} token_data;
 	int maxK;
