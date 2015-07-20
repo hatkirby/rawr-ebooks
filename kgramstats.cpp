@@ -299,15 +299,18 @@ vector<string> kgramstats::randomSentence(int n)
 	return result;
 }
 
+bool removeIf(char c)
+{
+  return !((c != '.') && (c != '"') && (c != '(') && (c != ')') && (c != ','));
+}
+
 std::string canonize(std::string f)
 {
 	string canonical(f);
 	transform(canonical.begin(), canonical.end(), canonical.begin(), ::tolower);
   
   string result;
-  remove_copy_if(canonical.begin(), canonical.end(), std::back_inserter(result), [] (char c) {
-    return !((c != '.') && (c != '"') && (c != '(') && (c != ')') && (c != ','));
-  });
+  remove_copy_if(canonical.begin(), canonical.end(), std::back_inserter(result), removeIf);
 	
 	return result;
 }
