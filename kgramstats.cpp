@@ -79,7 +79,7 @@ kgramstats::kgramstats(string corpus, int maxK)
         newClause = false;
       }
 			
-			if ((f.length() > 0) && (f[f.length()-1] == '.'))
+			if ((f.length() > 0) && ((f[f.length()-1] == '.') || (f[f.length()-1] == '!') || (f[f.length()-1] == '?')))
 			{
 				td->period++;
         newSentence = true;
@@ -301,7 +301,7 @@ vector<string> kgramstats::randomSentence(int n)
 
 bool removeIf(char c)
 {
-  return !((c != '.') && (c != '"') && (c != '(') && (c != ')') && (c != ','));
+  return !((c != '.') && (c != '?') && (c != '!') && (c != '"') && (c != '(') && (c != ')') && (c != ','));
 }
 
 std::string canonize(std::string f)
