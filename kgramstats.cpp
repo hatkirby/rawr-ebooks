@@ -66,7 +66,7 @@ kgramstats::kgramstats(string corpus, int maxK)
         newSentence = false;
       }
       
-      if (newClause)
+      if (newClause || newSentence)
       {
         kgram commaKgram(1, ",");
         if (tstats[commaKgram] == NULL)
@@ -78,12 +78,36 @@ kgramstats::kgramstats(string corpus, int maxK)
         
         newClause = false;
       }
-			
-			if ((f.length() > 0) && ((f[f.length()-1] == '.') || (f[f.length()-1] == '!') || (f[f.length()-1] == '?')))
-			{
-				td->period++;
+      
+      if ((f.length() > 0) && (f[f.length()-1] == '\n'))
+      {
+        td->period++;
         newSentence = true;
-			}
+        f.resize(f.length()-1);
+      }
+			
+      if (f.length() > 0)
+      {
+  			if ((f[f.length()-1] == '.') || (f[f.length()-1] == '!') || (f[f.length()-1] == '?'))
+  			{
+          if (!newSentence)
+          {
+    				td->period++;
+            newSentence = true;
+          }
+				
+          f.resize(f.length()-1);
+  			} else if (f[f.length()-1] == ',')
+        {
+          if (!newSentence)
+          {
+            td->comma++;
+            newClause = true;
+          }
+          
+          f.resize(f.length()-1);
+        }
+      }
       
       if (f.length() > 0)
       {
@@ -92,41 +116,41 @@ kgramstats::kgramstats(string corpus, int maxK)
           td->startquote++;
         }
         
-        if (f[f.length()-1] == '"')
-        {
-          td->endquote++;
-          
-          if ((f.length() > 1) && (f[f.length()-2] == ','))
-          {
-            td->comma++;
-            newClause = true;
-          }
-        }
-        
-        if (f[f.length()-1] == ',')
-        {
-          td->comma++;
-          newClause = true;
-          
-          if ((f.length() > 1) && (f[f.length()-2] == '"'))
-          {
-            td->endquote++;
-          }
-          
-          if ((f.length() > 1) && (f[f.length()-2] == ')'))
-          {
-            td->endparen++;
-          }
-        }
-        
         if (f[0] == '(')
         {
           td->startparen++;
         }
         
-        if (f[f.length()-1] == ')')
+        if ((f[f.length()-1] == '"') || (f[f.length()-1] == ')'))
         {
-          td->endparen++;
+          if (f[f.length()-1] == '"')
+          {
+            td->endquote++;
+          } else if (f[f.length()-1] == ')')
+          {
+            td->endparen++;
+          }
+          
+          f.resize(f.length()-1);
+          
+          if (f.length() > 0)
+          {
+      			if ((f[f.length()-1] == '.') || (f[f.length()-1] == '!') || (f[f.length()-1] == '?'))
+      			{
+              if (!newSentence)
+              {
+        				td->period++;
+                newSentence = true;
+              }
+      			} else if (f[f.length()-1] == ',')
+            {
+              if (!newSentence && !newClause)
+              {
+                td->comma++;
+                newClause = true;
+              }
+            }
+          }
         }
       }
 			
