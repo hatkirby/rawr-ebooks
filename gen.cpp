@@ -9,65 +9,63 @@
 #include <iostream>
 #include "freevars.h"
 
-using namespace::std;
-
 int main(int argc, char** args)
 {
 	srand(time(NULL));
     
     if (argc == 1)
     {
-        cout << "rawr-gen, version 1.0" << endl;
-        cout << "Usage: rawr-gen corpus-file" << endl;
-        cout << "  where 'corpus-file' is the path to your input" << endl;
+        std::cout << "rawr-gen, version 1.0" << std::endl;
+        std::cout << "Usage: rawr-gen corpus-file" << std::endl;
+        std::cout << "  where 'corpus-file' is the path to your input" << std::endl;
         
         return 0;
     }
     
-	ifstream infile(args[1]);
+	std::ifstream infile(args[1]);
     if (!infile)
     {
-        cout << "rawr-gen, version 1.0" << endl;
-        cout << "Usage: rawr-gen corpus-file" << endl;
-        cout << "  where 'corpus-file' is the path to your input" << endl;
-        cout << endl;
-        cout << "The file you specified does not exist." << endl;
+        std::cout << "rawr-gen, version 1.0" << std::endl;
+        std::cout << "Usage: rawr-gen corpus-file" << std::endl;
+        std::cout << "  where 'corpus-file' is the path to your input" << std::endl;
+        std::cout << std::endl;
+        std::cout << "The file you specified does not exist." << std::endl;
         
         return 0;
     }
     
-	string corpus;
-	string line;
+	std::string corpus;
+	std::string line;
 	while (getline(infile, line))
 	{
 		corpus += " " + line;
 	}
 	
-    cout << "Preprocessing corpus..." << endl;
+    std::cout << "Preprocessing corpus..." << std::endl;
 	kgramstats* stats = new kgramstats(corpus, 3);
     
-    cout << "Preprocessing freevars..." << endl;
+    std::cout << "Preprocessing freevars..." << std::endl;
     freevars* vars = new freevars();
     vars->addVar("name", "names.txt");
     vars->addVar("noun", "nouns.txt");
     
-    cout << "Generating..." << endl;
+    std::cout << "Generating..." << std::endl;
 	for (;;)
 	{
-		vector<string> doc = stats->randomSentence(rand() % 35 + 15);
-		string hi;
-		for (vector<string>::iterator it = doc.begin(); it != doc.end(); ++it)
+		std::vector<std::string> doc = stats->randomSentence(rand() % 35 + 15);
+		std::string hi;
+		for (std::vector<std::string>::iterator it = doc.begin(); it != doc.end(); ++it)
 		{
 			hi += vars->parse(*it) + " ";
 		}
 
 		size_t lastperiod = hi.find_last_of(".");
-		if ((lastperiod != string::npos) && (rand() % 3 > 0))
+		if ((lastperiod != std::string::npos) && (rand() % 3 > 0))
 		{
 			hi = hi.substr(0, lastperiod+1);
 		}
 
-		cout << hi << endl;
+		std::cout << hi << std::endl;
 		
         getc(stdin);
 	}

@@ -4,17 +4,17 @@
 
 freevars::freevars()
 {
-    vars = new map<string, vector<string>* >();
+    vars = new std::map<std::string, std::vector<std::string>* >();
 }
 
-void freevars::addVar(string name, string filename)
+void freevars::addVar(std::string name, std::string filename)
 {
-    vector<string>* eltlist = new vector<string>();
+    std::vector<std::string>* eltlist = new std::vector<std::string>();
     
-    ifstream infile(filename.c_str());
+    std::ifstream infile(filename.c_str());
     if (infile)
     {
-        string line;
+        std::string line;
         
         while (getline(infile, line))
         {
@@ -27,18 +27,18 @@ void freevars::addVar(string name, string filename)
     (*vars)[name] = eltlist;
 }
 
-string freevars::parse(string in)
+std::string freevars::parse(std::string in)
 {
-    string res(in);
+    std::string res(in);
     
-    for (map<string, vector<string>* >::iterator it = vars->begin(); it != vars->end(); it++)
+    for (std::map<std::string, std::vector<std::string>* >::iterator it = vars->begin(); it != vars->end(); it++)
     {
-        string tofind = "$" + it->first + "$";
+        std::string tofind = "$" + it->first + "$";
         size_t fpos = res.find(tofind);
-        if (fpos != string::npos)
+        if (fpos != std::string::npos)
         {
             int r = rand() % it->second->size();
-            res.replace(fpos, tofind.length(), (*it->second)[r], 0, string::npos);
+            res.replace(fpos, tofind.length(), (*it->second)[r], 0, std::string::npos);
         }
     }
     

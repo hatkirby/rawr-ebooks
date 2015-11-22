@@ -12,8 +12,6 @@
 #include <yaml-cpp/yaml.h>
 #include "freevars.h"
 
-using namespace::std;
-
 int main(int argc, char** args)
 {
 	srand(time(NULL));

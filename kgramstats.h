@@ -2,19 +2,18 @@
 #include <map>
 #include <list>
 #include <vector>
-
-using namespace::std;
+#include "malaprop.h"
 
 #ifndef KGRAMSTATS_H
 #define KGRAMSTATS_H
 
-typedef list<string> kgram;
+typedef std::list<std::string> kgram;
 
 class kgramstats
 {
 public:
-	kgramstats(string corpus, int maxK);
-	vector<string> randomSentence(int n);
+	kgramstats(std::string corpus, int maxK);
+	std::vector<std::string> randomSentence(int n);
 	
 private:
 	typedef struct
@@ -28,13 +27,13 @@ private:
     int startparen;
     int endparen;
     int comma;
-		string* token;
+		std::string* token;
 	} token_data;
 	int maxK;
-	map<kgram, map<int, token_data*>* >* stats;
+	std::map<kgram, std::map<int, token_data*>* >* stats;
+  malaprop mstats;
 };
 
 void printKgram(kgram k);
-std::string canonize(std::string f);
 
 #endif

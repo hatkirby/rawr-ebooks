@@ -2,8 +2,6 @@
 #include <string>
 #include <vector>
 
-using namespace::std;
-
 #ifndef FREEVARS_H
 #define FREEVARS_H
 
@@ -11,11 +9,11 @@ class freevars
 {
 public:
     freevars();
-    void addVar(string name, string filename);
-    string parse(string in);
+    void addVar(std::string name, std::string filename);
+    std::string parse(std::string in);
     
 private:
-    map<string, vector<string>* >* vars;
+    std::map<std::string, std::vector<std::string>* >* vars;
 };
 
 #endif
