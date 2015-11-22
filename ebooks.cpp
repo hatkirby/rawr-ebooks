@@ -30,7 +30,7 @@ int main(int argc, char** args)
 	}
 
     cout << "Preprocessing corpus..." << endl;
-	kgramstats* stats = new kgramstats(corpus, 5);
+	kgramstats* stats = new kgramstats(corpus, 3);
     
     cout << "Preprocessing freevars..." << endl;
     freevars* vars = new freevars();
@@ -46,6 +46,12 @@ int main(int argc, char** args)
 		{
 			hi += vars->parse(*it) + " ";
 		}
+
+                size_t lastperiod = hi.find_last_of(".");
+                if ((lastperiod != string::npos) && (rand() % 3 > 0))
+                {
+                        hi = hi.substr(0, lastperiod+1);
+                }
 	
 		hi = hi.substr(0,140);
 
@@ -170,7 +176,7 @@ int main(int argc, char** args)
 	        printf( "\ntwitterClient:: twitCurl::statusUpdate error:\n%s\n", replyMsg.c_str() );
 	    }
 
-		sleep(delay);
+		sleep(rand() % delay);
 	}
 	
 	return 0;

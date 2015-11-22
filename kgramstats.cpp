@@ -206,7 +206,7 @@ vector<string> kgramstats::randomSentence(int n)
     {
       if (rand() % (maxK - cur.size() + 1) == 0)
       {
-        while (cur.size() > 0)
+        while (cur.size() > 1)
         {
           if ((rand() % (n)) < cuts)
           {
@@ -246,7 +246,7 @@ vector<string> kgramstats::randomSentence(int n)
     {
       nextToken[0] = toupper(nextToken[0]);
     }
-    
+    /*
     if (startquote < next->startquote)
     {
       nextToken = "\"" + nextToken;
@@ -288,7 +288,7 @@ vector<string> kgramstats::randomSentence(int n)
       
       nextToken += ",";
     }
-
+*/
 		if (cur.size() == maxK)
 		{
 			cur.pop_front();
@@ -336,5 +336,5 @@ std::string canonize(std::string f)
   string result;
   remove_copy_if(canonical.begin(), canonical.end(), std::back_inserter(result), removeIf);
 	
-	return result;
+	return canonical;
 }

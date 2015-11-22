@@ -44,7 +44,7 @@ int main(int argc, char** args)
 	}
 	
     cout << "Preprocessing corpus..." << endl;
-	kgramstats* stats = new kgramstats(corpus, 5);
+	kgramstats* stats = new kgramstats(corpus, 3);
     
     cout << "Preprocessing freevars..." << endl;
     freevars* vars = new freevars();
@@ -59,6 +59,12 @@ int main(int argc, char** args)
 		for (vector<string>::iterator it = doc.begin(); it != doc.end(); ++it)
 		{
 			hi += vars->parse(*it) + " ";
+		}
+
+		size_t lastperiod = hi.find_last_of(".");
+		if ((lastperiod != string::npos) && (rand() % 3 > 0))
+		{
+			hi = hi.substr(0, lastperiod+1);
 		}
 
 		cout << hi << endl;
