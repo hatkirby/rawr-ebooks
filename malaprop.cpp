@@ -1,6 +1,8 @@
 #include "malaprop.h"
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
+#include <cstdio>
 
 bool removeIfM(char c)
 {
@@ -87,8 +89,11 @@ malaprop::soundex malaprop::soundify(std::string f)
 void malaprop::addWord(std::string word)
 {
   soundex ex = soundify(word);
-  
-  dict[ex].insert(canonizetwo(word));
+
+  if (ex.prefix != 0)
+  {  
+    dict[ex].insert(canonizetwo(word));
+  }
 }
 
 void malaprop::stats()
