@@ -19,34 +19,34 @@ int main(int argc, char** args)
 	YAML::Node config = YAML::LoadFile("config.yml");
     int delay = config["delay"].as<int>();
 
-	ifstream infile(config["corpus"].as<std::string>().c_str());
-	string corpus;
-	string line;
+	std::ifstream infile(config["corpus"].as<std::string>().c_str());
+	std::string corpus;
+	std::string line;
 	while (getline(infile, line))
 	{
 		corpus += " " + line;
 	}
 
-    cout << "Preprocessing corpus..." << endl;
+    std::cout << "Preprocessing corpus..." << std::endl;
 	kgramstats* stats = new kgramstats(corpus, 3);
     
-    cout << "Preprocessing freevars..." << endl;
+    std::cout << "Preprocessing freevars..." << std::endl;
     freevars* vars = new freevars();
     vars->addVar("name", "names.txt");
     vars->addVar("noun", "nouns.txt");
 
-    cout << "Generating..." << endl;
+    std::cout << "Generating..." << std::endl;
 	for (;;)
 	{
-		vector<string> doc = stats->randomSentence(rand() % 25 + 5);
-		string hi;
-		for (vector<string>::iterator it = doc.begin(); it != doc.end(); ++it)
+		std::vector<std::string> doc = stats->randomSentence(rand() % 25 + 5);
+		std::string hi;
+		for (std::vector<std::string>::iterator it = doc.begin(); it != doc.end(); ++it)
 		{
 			hi += vars->parse(*it) + " ";
 		}
 
                 size_t lastperiod = hi.find_last_of(".");
-                if ((lastperiod != string::npos) && (rand() % 3 > 0))
+                if ((lastperiod != std::string::npos) && (rand() % 3 > 0))
                 {
                         hi = hi.substr(0, lastperiod+1);
                 }
