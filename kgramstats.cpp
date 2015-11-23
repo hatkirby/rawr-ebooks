@@ -206,7 +206,7 @@ std::vector<std::string> kgramstats::randomSentence(int n)
 	
 	for (int i=0; i<n; i++)
 	{
-    if ((cur.size() > 0) && (cur != newKgram))
+    /*if ((cur.size() > 0) && (cur != newKgram))
     {
       if (rand() % (maxK - cur.size() + 1) == 0)
       {
@@ -223,7 +223,7 @@ std::vector<std::string> kgramstats::randomSentence(int n)
       }
       
       cuts++;
-    }
+    }*/
 
 		std::map<int, token_data*> distribution = *(*stats)[cur];
 		int max = distribution.rbegin()->first;
@@ -241,12 +241,9 @@ std::vector<std::string> kgramstats::randomSentence(int n)
 		if (casing < next->uppercase)
 		{
 			std::transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
-		} else if ((casing - next->uppercase) < next->titlecase)
-		{
-			nextToken[0] = toupper(nextToken[0]);
 		}
     
-    if ((cur == newKgram) && (rand() % 3 < 2))
+    if ((cur == newKgram) && (rand() % 15 > 0))
     {
       nextToken[0] = toupper(nextToken[0]);
     }
@@ -255,48 +252,48 @@ std::vector<std::string> kgramstats::randomSentence(int n)
     if (mess)
     {
       nextToken = mstats.alternate(nextToken);
+    }
 
-      if (startquote < next->startquote)
+    if (startquote < next->startquote)
+    {
+      nextToken = "\"" + nextToken;
+    } else if (startparen < next->startparen)
+    {
+      nextToken = "(" + nextToken;
+    }
+	
+		if (period < next->period)
+		{
+      if (endquote < next->endquote)
       {
-        nextToken = "\"" + nextToken;
-      } else if (startparen < next->startparen)
+        nextToken += "\"";
+      } else if (endparen < next->endparen)
       {
-        nextToken = "(" + nextToken;
+        nextToken += ")";
       }
-		
-  		if (period < next->period)
-  		{
-        if (endquote < next->endquote)
-        {
-          nextToken += "\"";
-        } else if (endparen < next->endparen)
-        {
-          nextToken += ")";
-        }
-      
-        int type = rand() % 6;
-      
-        if (type < 3)
-        {
-          nextToken += ".";
-        } else if (type < 5)
-        {
-          nextToken += "!";
-        } else {
-          nextToken += "?";
-        }
-  		} else if (comma < next->comma)
+    
+      int type = rand() % 6;
+    
+      if (type < 3)
       {
-        if (endquote < next->endquote)
-        {
-          nextToken += "\"";
-        } else if (endparen < next->endparen)
-        {
-          nextToken += ")";
-        }
-      
-        nextToken += ",";
+        nextToken += ".";
+      } else if (type < 5)
+      {
+        nextToken += "!";
+      } else {
+        nextToken += "?";
       }
+		} else if (comma < next->comma)
+    {
+      if (endquote < next->endquote)
+      {
+        nextToken += "\"";
+      } else if (endparen < next->endparen)
+      {
+        nextToken += ")";
+      }
+    
+      nextToken += ",";
     }
     
 		if (cur.size() == maxK)
@@ -324,7 +321,7 @@ std::vector<std::string> kgramstats::randomSentence(int n)
       cur.pop_front();
     }
 		
-    if ((period < next->period) && ((rand() % 2) == 0))
+    if ((period < next->period) && ((rand() % 3) == 0))
     {
       cur = newKgram;
     } else if ((comma < next->comma) && ((rand() % 3) == 0))
@@ -361,5 +358,5 @@ std::string canonize(std::string f)
   std::string result;
   std::remove_copy_if(canonical.begin(), canonical.end(), std::back_inserter(result), removeIf);
 	
-	return canonical;
+	return result;
 }
