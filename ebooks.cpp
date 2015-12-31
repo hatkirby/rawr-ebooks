@@ -24,11 +24,11 @@ int main(int argc, char** args)
 	std::string line;
 	while (getline(infile, line))
 	{
-		corpus += " " + line;
+		corpus += line + "\n ";
 	}
 
     std::cout << "Preprocessing corpus..." << std::endl;
-	kgramstats* stats = new kgramstats(corpus, 3);
+	kgramstats* stats = new kgramstats(corpus, 4);
     
     std::cout << "Preprocessing freevars..." << std::endl;
     freevars* vars = new freevars();
@@ -38,20 +38,26 @@ int main(int argc, char** args)
     std::cout << "Generating..." << std::endl;
 	for (;;)
 	{
-		std::vector<std::string> doc = stats->randomSentence(rand() % 25 + 5);
+		std::vector<std::string> doc = stats->randomSentence(rand() % 45 + 5);
 		std::string hi;
 		for (std::vector<std::string>::iterator it = doc.begin(); it != doc.end(); ++it)
 		{
 			hi += vars->parse(*it) + " ";
 		}
 
-                size_t lastperiod = hi.find_last_of(".");
-                if ((lastperiod != std::string::npos) && (rand() % 3 > 0))
-                {
-                        hi = hi.substr(0, lastperiod+1);
-                }
-	
-		hi = hi.substr(0,140);
+    size_t firstperiod = hi.find_first_of(".!?");
+    if (firstperiod != std::string::npos)
+    {
+      hi = hi.substr(firstperiod+2);
+    }
+    
+    hi.resize(140);
+
+		size_t lastperiod = hi.find_last_of(".!?");
+		if ((lastperiod != std::string::npos) && (rand() % 3 > 0))
+		{
+			hi = hi.substr(0, lastperiod+1);
+		}
 
 	    twitCurl twitterObj;
 	    std::string tmpStr, tmpStr2;
