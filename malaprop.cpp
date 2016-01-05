@@ -117,6 +117,11 @@ std::string malaprop::alternate(std::string word)
 {
   soundex ex = soundify(word);
   std::set<std::string>& opts = dict[ex];
+  if (opts.size() == 0)
+  {
+    return word;
+  }
+  
   int opt = rand() % opts.size();
   for (std::set<std::string>::iterator it = opts.begin(); it != opts.end(); it++)
   {
