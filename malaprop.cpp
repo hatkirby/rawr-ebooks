@@ -119,7 +119,6 @@ std::string malaprop::alternate(std::string word)
   std::set<std::string>& opts = dict[ex];
   if (opts.size() == 0)
   {
-    // Not sure why this can even happen but it is happenining????
     return word;
   }
 
