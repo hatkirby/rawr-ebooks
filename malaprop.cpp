@@ -121,7 +121,7 @@ std::string malaprop::alternate(std::string word)
   {
     return word;
   }
-  
+
   int opt = rand() % opts.size();
   for (std::set<std::string>::iterator it = opts.begin(); it != opts.end(); it++)
   {
