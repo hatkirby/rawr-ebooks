@@ -33,3 +33,8 @@ rawr-ebooks
 rawr-ebooks.exe
 rawr-gen
 rawr-gen.exe
+
+# CMake
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake

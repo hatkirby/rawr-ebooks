@@ -1,0 +1,3 @@
+[submodule "vendor/twitcurl"]
+	path = vendor/twitcurl
+	url = https://github.com/swatkat/twitcurl
