@@ -7,19 +7,34 @@
 #ifndef KGRAMSTATS_H
 #define KGRAMSTATS_H
 
+enum tokentype {
+  tokentype_literal,
+  tokentype_hashtag
+};
+
 struct token {
+  tokentype type;
   std::string canon;
   bool terminating;
   
-  token(std::string canon) : canon(canon), terminating(false) {}
+  token(std::string canon) : type(tokentype_literal), canon(canon), terminating(false) {}
+  token(tokentype type) : type(type), canon(""), terminating(false) {}
   
   bool operator<(const token& other) const
   {
-    if (canon == other.canon)
+    if (type != other.type)
     {
-      return !terminating && other.terminating;
+      return type < other.type;
+    } else if (type == tokentype_literal)
+    {
+      if (canon == other.canon)
+      {
+        return !terminating && other.terminating;
+      } else {
+        return canon < other.canon;
+      }
     } else {
-      return canon < other.canon;
+      return !terminating && other.terminating;
     }
   }
 };
@@ -94,6 +109,7 @@ private:
 	std::map<kgram, std::map<int, token_data> > stats;
   malaprop mstats;
   std::map<token, std::map<int, termstats> > endings;
+  std::vector<std::string> hashtags;
 };
 
 void printKgram(kgram k);

@@ -43,6 +43,30 @@ query wildcardQuery(querytype_sentence);
 
 std::string canonize(std::string f);
 
+token token_from_string(std::string in)
+{
+  if (in[0] == '#')
+  {
+    token word(tokentype_hashtag);
+    
+    if (in.find_first_of(".?!,") != std::string::npos)
+    {
+      word.terminating = true;
+    }
+    
+    return word;
+  } else {
+    token word(canonize(in));
+  
+    if (in.find_first_of(".?!,") != std::string::npos)
+    {
+      word.terminating = true;
+    }
+    
+    return word;
+  }
+}
+
 // runs in O(t^2) time where t is the number of tokens in the input corpus
 // We consider maxK to be fairly constant
 kgramstats::kgramstats(std::string corpus, int maxK)
@@ -52,6 +76,7 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   std::vector<std::string> tokens;
   size_t start = 0;
   int end = 0;
+  std::set<std::string> thashtags;
 
   while (end != std::string::npos)
   {
@@ -72,9 +97,19 @@ kgramstats::kgramstats(std::string corpus, int maxK)
     {
       mstats.addWord(token);
       tokens.push_back(token);
+      
+      if (token[0] == '#')
+      {
+        thashtags.insert(canonize(token));
+      }
     }
 
     start = ((end > (std::string::npos - 1) ) ? std::string::npos : end + 1);
+  }
+  
+  for (std::set<std::string>::iterator it = thashtags.begin(); it != thashtags.end(); it++)
+  {
+    hashtags.push_back(*it);
   }
 	
   std::map<kgram, std::map<token, token_data> > tstats;
@@ -88,20 +123,13 @@ kgramstats::kgramstats(std::string corpus, int maxK)
       
       for (std::list<std::string>::iterator it = seq.begin(); it != seq.end(); it++)
       {
-        token word(canonize(*it));
-        
-        if (it->find_first_of(".?!,") != std::string::npos)
-        {
-          word.terminating = true;
-        }
-        
-        prefix.push_back(word);
+        prefix.push_back(token_from_string(*it));
       }
       
       std::string f = tokens[i+k];
 		  std::string canonical = canonize(f);
       
-      token word(canonical);
+      token word(token_from_string(canonical));
       if (f.find_first_of(".?!,") != std::string::npos)
       {
         word.terminating = true;
@@ -184,11 +212,22 @@ void printKgram(kgram k)
       std::cout << "#.# ";
     } else if (q.type == querytype_literal)
     {
-      if (q.word.terminating)
+      if (q.word.type == tokentype_hashtag)
       {
-        std::cout << q.word.canon << ". ";
-      } else {
-        std::cout << q.word.canon << " ";
+        if (q.word.terminating)
+        {
+          std::cout << "#hashtag. ";
+        } else {
+          std::cout << "#hashtag ";
+        }
+      } else if (q.word.type == tokentype_literal)
+      {
+        if (q.word.terminating)
+        {
+          std::cout << q.word.canon << ". ";
+        } else {
+          std::cout << q.word.canon << " ";
+        }
       }
     }
   }
@@ -238,37 +277,47 @@ std::vector<std::string> kgramstats::randomSentence(int n)
     int max = distribution.rbegin()->first;
     int r = rand() % max;
     token_data& next = distribution.upper_bound(r)->second;
-    std::string nextToken(next.word.canon);
+    std::string nextToken;
+    bool mess = false;
     
-    bool mess = (rand() % 100) == 0;
-    if (mess)
+    if (next.word.type == tokentype_literal)
     {
-      nextToken = mstats.alternate(nextToken);
+      nextToken = next.word.canon;
+    
+      mess = (rand() % 100) == 0;
+      if (mess)
+      {
+        nextToken = mstats.alternate(nextToken);
+      }
+    
+      // Determine the casing of the next token. We randomly make the token all
+      // caps based on the markov chain. Otherwise, we check if the previous
+      // token is the end of a sentence (terminating token or a wildcard query).
+      int casing = rand() % next.all;
+      if (casing < next.uppercase)
+      {
+        std::transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
+      } else if ((((cur.rbegin()->type == querytype_sentence)
+            || ((cur.rbegin()->type == querytype_literal)
+              && (cur.rbegin()->word.terminating)))
+          && (rand() % 2 > 0))
+        || (casing - next.uppercase < next.titlecase))
+      {
+        nextToken[0] = toupper(nextToken[0]);
+      }
+    } else if (next.word.type == tokentype_hashtag)
+    {
+      int rhash = rand() % hashtags.size();
+      nextToken = hashtags[rhash];
     }
     
-    // Determine the casing of the next token. We randomly make the token all
-    // caps based on the markov chain. Otherwise, we check if the previous
-    // token is the end of a sentence (terminating token or a wildcard query).
-    int casing = rand() % next.all;
-    if (casing < next.uppercase)
-    {
-      std::transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
-    } else if ((((cur.rbegin()->type == querytype_sentence)
-          || ((cur.rbegin()->type == querytype_literal)
-            && (cur.rbegin()->word.terminating)))
-        && (rand() % 2 > 0))
-      || (casing - next.uppercase < next.titlecase))
-    {
-      nextToken[0] = toupper(nextToken[0]);
-    }
-
     if (next.word.terminating)
     {
       std::map<int, termstats>& ending = endings[next.word];
       int emax = ending.rbegin()->first;
       int er = rand() % emax;
       termstats& nextend = ending.upper_bound(er)->second;
-      
+    
       nextToken.append(std::string(nextend.occurrences, nextend.terminator));
     }
 		
