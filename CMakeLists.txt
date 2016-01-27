@@ -1,13 +1,17 @@
 cmake_minimum_required (VERSION 2.6)
 project (rawr-ebooks)
 
-add_subdirectory(vendor/twitcurl/libtwitcurl)
-
 find_package(PkgConfig)
-pkg_check_modules(YamlCpp yaml-cpp REQUIRED)
+pkg_check_modules(YamlCpp yaml-cpp)
+find_package(curl)
 
-include_directories(vendor/twitcurl/libtwitcurl)
-add_executable(rawr-ebooks ebooks.cpp kgramstats.cpp freevars.cpp malaprop.cpp)
-target_link_libraries(rawr-ebooks ${YamlCpp_LIBRARIES} twitcurl curl)
+if (YamlCpp_FOUND AND CURL_FOUND)
+  add_subdirectory(vendor/twitcurl/libtwitcurl)
+  include_directories(vendor/twitcurl/libtwitcurl)
+  add_executable(rawr-ebooks ebooks.cpp kgramstats.cpp freevars.cpp malaprop.cpp)
+  target_link_libraries(rawr-ebooks ${YamlCpp_LIBRARIES} twitcurl ${CURL_LIBRARIES})
+else (YamlCpp_FOUND AND CURL_FOUND)
+  message(STATUS "rawr-ebooks requires yaml-cpp and twitcurl; without these, we will only make rawr-gen")
+endif (YamlCpp_FOUND AND CURL_FOUND)
 
 add_executable(rawr-gen gen.cpp kgramstats.cpp freevars.cpp malaprop.cpp)
