@@ -34,8 +34,8 @@ std::string freevars::parse(std::string in)
     for (std::map<std::string, std::vector<std::string>* >::iterator it = vars->begin(); it != vars->end(); it++)
     {
         std::string tofind = "$" + it->first + "$";
-        size_t fpos = res.find(tofind);
-        if (fpos != std::string::npos)
+        size_t fpos;
+        while ((fpos = res.find(tofind)) != std::string::npos)
         {
             int r = rand() % it->second->size();
             res.replace(fpos, tofind.length(), (*it->second)[r], 0, std::string::npos);

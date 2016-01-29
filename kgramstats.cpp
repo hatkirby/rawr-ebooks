@@ -37,35 +37,11 @@
 #include <iostream>
 #include <cstdlib>
 #include <algorithm>
-#include "malaprop.h"
+#include <set>
+#include <stack>
 
-query wildcardQuery(querytype_sentence);
-
-std::string canonize(std::string f);
-
-token token_from_string(std::string in)
-{
-  if (in[0] == '#')
-  {
-    token word(tokentype_hashtag);
-    
-    if (in.find_first_of(".?!,") != std::string::npos)
-    {
-      word.terminating = true;
-    }
-    
-    return word;
-  } else {
-    token word(canonize(in));
-  
-    if (in.find_first_of(".?!,") != std::string::npos)
-    {
-      word.terminating = true;
-    }
-    
-    return word;
-  }
-}
+query wildcardQuery {querytype::sentence};
+word blank_word {""};
 
 // runs in O(t^2) time where t is the number of tokens in the input corpus
 // We consider maxK to be fairly constant
@@ -73,7 +49,7 @@ kgramstats::kgramstats(std::string corpus, int maxK)
 {
   this->maxK = maxK;
   
-  std::vector<std::string> tokens;
+  std::vector<token> tokens;
   size_t start = 0;
   int end = 0;
   std::set<std::string> thashtags;
@@ -82,88 +58,186 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   {
     end = corpus.find(" ", start);
 
-    std::string token = corpus.substr(start, (end == std::string::npos) ? std::string::npos : end - start);
-    if (token[token.length()-1] == '\n')
+    std::string t = corpus.substr(start, (end == std::string::npos) ? std::string::npos : end - start);
+    if (t.compare("") && t.compare("."))
     {
-      if ((token[token.length()-2] != '.') && (token[token.length()-2] != '!') && (token[token.length()-2] != '?') && (token[token.length()-2] != ','))
-      {
-        token.insert(token.length()-1, ".");
-      }
-         
-      token.resize(token.length()-1);
-    }
-       
-    if (token.compare("") && token.compare("."))
-    {
-      mstats.addWord(token);
-      tokens.push_back(token);
+      std::string tc(t), canonical;
+      std::transform(tc.begin(), tc.end(), tc.begin(), ::tolower);
+      std::remove_copy_if(tc.begin(), tc.end(), std::back_inserter(canonical), [=] (char c) {
+        return !((c != '.') && (c != '?') && (c != '!') && (c != ',') && (c != '"') && (c != '(') && (c != ')') && (c != '\n') && (c != '[') && (c != ']') && (c != '*'));
+      });
       
-      if (token[0] == '#')
+      word& w = ([&] () -> word& {
+        // Hashtag freevar
+        if (canonical[0] == '#')
+        {
+          thashtags.insert(canonical);
+          canonical = "#hashtag";
+          
+          return hashtags;
+        }
+        
+        // Basically any other word
+        if (words.count(canonical) == 0)
+        {
+          words.emplace(canonical, canonical);
+        }
+        
+        word& tw = words.at(canonical);
+        tw.forms.add(canonical);
+        
+        return tw;
+      })();
+      
+      token tk(w);
+      tk.raw = t;
+      
+      for (char c : t)
       {
-        thashtags.insert(canonize(token));
+        if (c == '*')
+        {
+          tk.delimiters[{parentype::asterisk, doublestatus::opening}]++;
+        } else if (c == '[')
+        {
+          tk.delimiters[{parentype::square_bracket, doublestatus::opening}]++;
+        } else if (c == '(')
+        {
+          tk.delimiters[{parentype::paren, doublestatus::opening}]++;
+        } else if (c == '"')
+        {
+          tk.delimiters[{parentype::quote, doublestatus::opening}]++;
+        } else {
+          break;
+        }
       }
+      
+      int backtrack = t.find_last_not_of(".,?!])\"*\n") + 1;
+      if (backtrack != t.length())
+      {
+        std::string ending = t.substr(backtrack);
+        std::string suffix;
+        
+        for (char c : ending)
+        {
+          if ((c == '.') || (c == ',') || (c == '?') || (c == '!'))
+          {
+            suffix += c;
+            
+            continue;
+          } else if (c == '\n')
+          {
+            // At least the end is coming
+            if (suffix.empty())
+            {
+              suffix = ".";
+            }
+            
+            break;
+          }
+          
+          parentype pt = ([&] {
+            switch (c)
+            {
+              case ']': return parentype::square_bracket;
+              case ')': return parentype::paren;
+              case '*': return parentype::asterisk;
+              case '"': return parentype::quote;
+            }
+          })();
+          
+          if (tk.delimiters[{pt, doublestatus::opening}] > 0)
+          {
+            tk.delimiters[{pt, doublestatus::opening}]--;
+            tk.delimiters[{pt, doublestatus::both}]++;
+          } else {
+            tk.delimiters[{pt, doublestatus::closing}]++;
+          }
+        }
+        
+        if (suffix == ",")
+        {
+          tk.suffix = suffixtype::comma;
+        } else if (!suffix.empty()) {
+          tk.suffix = suffixtype::terminating;
+          
+          w.terms.add(suffix);
+        }
+      }
+      
+      tokens.push_back(tk);
     }
 
     start = ((end > (std::string::npos - 1) ) ? std::string::npos : end + 1);
   }
   
-  for (std::set<std::string>::iterator it = thashtags.begin(); it != thashtags.end(); it++)
+  // Time to condense the distribution stuff for the words
+  for (auto& it : words)
   {
-    hashtags.push_back(*it);
+    it.second.forms.compile();
+    it.second.terms.compile();
   }
-	
+  
+  // Hashtag freevar is not frequency distributed
+  for (auto& it : thashtags)
+  {
+    hashtags.forms.add(it);
+  }
+  
+  hashtags.forms.compile();
+  hashtags.terms.compile();
+
+  // kgram distribution
   std::map<kgram, std::map<token, token_data> > tstats;
-  std::map<token, std::map<termstats, int> > tendings;
   for (int k=1; k<maxK; k++)
   {
     for (int i=0; i<(tokens.size() - k); i++)
     {
-      std::list<std::string> seq(tokens.begin()+i, tokens.begin()+i+k);
-      kgram prefix;
-      
-      for (std::list<std::string>::iterator it = seq.begin(); it != seq.end(); it++)
+      kgram prefix(tokens.begin()+i, tokens.begin()+i+k);
+      token f = tokens[i+k];
+
+      if (tstats[prefix].count(f) == 0)
       {
-        prefix.push_back(token_from_string(*it));
-      }
-      
-      std::string f = tokens[i+k];
-		  std::string canonical = canonize(f);
-      
-      token word(token_from_string(canonical));
-      if (f.find_first_of(".?!,") != std::string::npos)
-      {
-        word.terminating = true;
-        
-        char terminator = f[f.find_last_of(".?!,")];
-        int occurrences = std::count(f.begin(), f.end(), terminator);
-        
-        tendings[word][termstats(terminator, occurrences)]++;
+        tstats[prefix].emplace(f, f);
       }
 			
-      token_data& td = tstats[prefix][word];
-      td.word = word;
+      token_data& td = tstats[prefix].at(f);
       td.all++;
 
-      if (std::find_if(f.begin(), f.end(), ::islower) == f.end())
+      if (std::find_if(f.raw.begin(), f.raw.end(), ::islower) == f.raw.end())
       {
         td.uppercase++;
-      } else if (isupper(f[0]))
+      } else if (isupper(f.raw[0]))
       {
         td.titlecase++;
       }
       
-      if (prefix.front().word.terminating)
+      kgram term_prefix;
+      bool changed = false;
+      std::transform(prefix.begin(), prefix.end(), std::back_inserter(term_prefix), [&] (query& q) {
+        if (q.tok.suffix == suffixtype::terminating)
+        {
+          changed = true;
+          
+          return wildcardQuery;
+        } else {
+          return q;
+        }
+      });
+      
+      if (changed)
       {
-        prefix.front() = wildcardQuery;
+        if (tstats[term_prefix].count(f) == 0)
+        {
+          tstats[term_prefix].emplace(f, f);
+        }
         
-        token_data& td2 = tstats[prefix][word];
-        td2.word = word;
+        token_data& td2 = tstats[term_prefix].at(f);
         td2.all++;
 
-        if (std::find_if(f.begin(), f.end(), ::islower) == f.end())
+        if (std::find_if(f.raw.begin(), f.raw.end(), ::islower) == f.raw.end())
         {
           td2.uppercase++;
-        } else if (isupper(f[0]))
+        } else if (isupper(f.raw[0]))
         {
           td2.titlecase++;
         }
@@ -171,74 +245,52 @@ kgramstats::kgramstats(std::string corpus, int maxK)
     }
   }
 	
-  for (std::map<kgram, std::map<token, token_data> >::iterator it = tstats.begin(); it != tstats.end(); it++)
+  // Condense the kgram distribution
+  for (auto& it : tstats)
   {
-    kgram klist = it->first;
-    std::map<token, token_data>& probtable = it->second;
-    std::map<int, token_data>& distribution = stats[klist];
+    kgram klist = it.first;
+    auto& probtable = it.second;
+    auto& distribution = stats[klist];
     int max = 0;
 		
-    for (std::map<token, token_data>::iterator kt = probtable.begin(); kt != probtable.end(); kt++)
+    for (auto& kt : probtable)
     {
-      max += kt->second.all;
+      max += kt.second.all;
 			
-      distribution[max] = kt->second;
-    }
-  }
-  
-  for (std::map<token, std::map<termstats, int> >::iterator it = tendings.begin(); it != tendings.end(); it++)
-  {
-    token word = it->first;
-    std::map<termstats, int>& probtable = it->second;
-    std::map<int, termstats>& distribution = endings[word];
-    int max = 0;
-    
-    for (std::map<termstats, int>::iterator kt = probtable.begin(); kt != probtable.end(); kt++)
-    {
-      max += kt->second;
-      
-      distribution[max] = kt->first;
+      distribution.emplace(max, kt.second);
     }
   }
 }
 
 void printKgram(kgram k)
 {
-  for (kgram::iterator it = k.begin(); it != k.end(); it++)
+  for (auto& q : k)
   {
-    query& q = *it;
-    if (q.type == querytype_sentence)
+    if (q.type == querytype::sentence)
     {
       std::cout << "#.# ";
-    } else if (q.type == querytype_literal)
+    } else if (q.type == querytype::literal)
     {
-      if (q.word.type == tokentype_hashtag)
+      if (q.tok.suffix == suffixtype::terminating)
       {
-        if (q.word.terminating)
-        {
-          std::cout << "#hashtag. ";
-        } else {
-          std::cout << "#hashtag ";
-        }
-      } else if (q.word.type == tokentype_literal)
+        std::cout << q.tok.w.canon << ". ";
+      } else if (q.tok.suffix == suffixtype::comma)
       {
-        if (q.word.terminating)
-        {
-          std::cout << q.word.canon << ". ";
-        } else {
-          std::cout << q.word.canon << " ";
-        }
+        std::cout << q.tok.w.canon << ", ";
+      } else {
+        std::cout << q.tok.w.canon << " ";
       }
     }
   }
 }
 
 // runs in O(n log t) time where n is the input number of sentences and t is the number of tokens in the input corpus
-std::vector<std::string> kgramstats::randomSentence(int n)
+std::string kgramstats::randomSentence(int n)
 {
-  std::vector<std::string> result;
+  std::string result;
   kgram cur(1, wildcardQuery);
   int cuts = 0;
+  std::stack<parentype> open_delimiters;
 	
   for (int i=0; i<n; i++)
   {
@@ -273,86 +325,135 @@ std::vector<std::string> kgramstats::randomSentence(int n)
       cur = kgram(1, wildcardQuery);
     }
 
-    std::map<int, token_data>& distribution = stats[cur];
+    auto& distribution = stats[cur];
     int max = distribution.rbegin()->first;
     int r = rand() % max;
     token_data& next = distribution.upper_bound(r)->second;
-    std::string nextToken;
-    bool mess = false;
-    
-    if (next.word.type == tokentype_literal)
+    std::string nextToken = next.tok.w.forms.next();
+  
+    // Determine the casing of the next token. We randomly make the token all
+    // caps based on the markov chain. Otherwise, we check if the previous
+    // token is the end of a sentence (terminating token or a wildcard query).
+    int casing = rand() % next.all;
+    if (casing < next.uppercase)
     {
-      nextToken = next.word.canon;
-    
-      mess = (rand() % 100) == 0;
-      if (mess)
-      {
-        nextToken = mstats.alternate(nextToken);
-      }
-    
-      // Determine the casing of the next token. We randomly make the token all
-      // caps based on the markov chain. Otherwise, we check if the previous
-      // token is the end of a sentence (terminating token or a wildcard query).
-      int casing = rand() % next.all;
-      if (casing < next.uppercase)
-      {
-        std::transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
-      } else if ((((cur.rbegin()->type == querytype_sentence)
-            || ((cur.rbegin()->type == querytype_literal)
-              && (cur.rbegin()->word.terminating)))
-          && (rand() % 2 > 0))
-        || (casing - next.uppercase < next.titlecase))
-      {
-        nextToken[0] = toupper(nextToken[0]);
-      }
-    } else if (next.word.type == tokentype_hashtag)
+      std::transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
+    } else if ((((cur.rbegin()->type == querytype::sentence)
+          || ((cur.rbegin()->type == querytype::literal)
+            && (cur.rbegin()->tok.suffix == suffixtype::terminating)))
+        && (rand() % 2 > 0))
+      || (casing - next.uppercase < next.titlecase))
     {
-      int rhash = rand() % hashtags.size();
-      nextToken = hashtags[rhash];
+      nextToken[0] = toupper(nextToken[0]);
     }
     
-    if (next.word.terminating)
+    // Delimiters
+    for (auto& dt : next.tok.delimiters)
     {
-      std::map<int, termstats>& ending = endings[next.word];
-      int emax = ending.rbegin()->first;
-      int er = rand() % emax;
-      termstats& nextend = ending.upper_bound(er)->second;
+      if (dt.first.status == doublestatus::both)
+      {
+        switch (dt.first.type)
+        {
+          case parentype::paren: nextToken = std::string("(", dt.second) + nextToken + std::string(")", dt.second); break;
+          case parentype::square_bracket: nextToken = std::string("[", dt.second) + nextToken + std::string("]", dt.second); break;
+          case parentype::asterisk: nextToken = std::string("*", dt.second) + nextToken + std::string("*", dt.second); break;
+          case parentype::quote: nextToken = std::string("\"", dt.second) + nextToken + std::string("\"", dt.second); break;
+        }
+      } else if (dt.first.status == doublestatus::opening)
+      {
+        for (int i=0; i<dt.second; i++)
+        {
+          open_delimiters.push(dt.first.type);
+        }
+        
+        switch (dt.first.type)
+        {
+          case parentype::paren: nextToken = std::string("(", dt.second) + nextToken; break;
+          case parentype::square_bracket: nextToken = std::string("[", dt.second) + nextToken; break;
+          case parentype::asterisk: nextToken = std::string("*", dt.second) + nextToken; break;
+          case parentype::quote: nextToken = std::string("\"", dt.second) + nextToken; break;
+        }
+      } else if (dt.first.status == doublestatus::closing)
+      {
+        for (int i=0; i<dt.second; i++)
+        {
+          while (!open_delimiters.empty() && (open_delimiters.top() != dt.first.type))
+          {
+            switch (open_delimiters.top())
+            {
+              case parentype::paren: nextToken.append(")"); break;
+              case parentype::square_bracket: nextToken.append("]"); break;
+              case parentype::asterisk: nextToken.append("*"); break;
+              case parentype::quote: nextToken.append("\""); break;
+            }
+            
+            open_delimiters.pop();
+          }
+          
+          if (open_delimiters.empty())
+          {
+            switch (dt.first.type)
+            {
+              case parentype::paren: result = "(" + result; break;
+              case parentype::square_bracket: result = "[" + result; break;
+              case parentype::asterisk: result = "*" + result; break;
+              case parentype::quote: result = "\"" + result; break;
+            }
+          }
+          
+          switch (dt.first.type)
+          {
+            case parentype::paren: nextToken.append(")"); break;
+            case parentype::square_bracket: nextToken.append("]"); break;
+            case parentype::asterisk: nextToken.append("*"); break;
+            case parentype::quote: nextToken.append("\""); break;
+          }
+        }
+      }
+    }
     
-      nextToken.append(std::string(nextend.occurrences, nextend.terminator));
+    // Terminators
+    if (next.tok.suffix == suffixtype::terminating)
+    {
+      nextToken.append(next.tok.w.terms.next());
+    } else if (next.tok.suffix == suffixtype::comma)
+    {
+      nextToken.append(",");
     }
 		
     /* DEBUG */
     printKgram(cur);
+    std::cout << "-> \"" << nextToken << "\" (" << next.all << "/" << max << ")" << std::endl;
+
+    cur.push_back(next.tok);
 		
-    std::cout << "-> \"" << nextToken << "\" (" << next.all << "/" << max << ")";
+    result.append(nextToken + " ");
     
-    if (mess)
+    if ((next.tok.suffix == suffixtype::terminating) && (rand() % 4 == 0))
     {
-      std::cout << " mala " << next.word.canon;
+      break;
+    }
+  }
+  
+  // Remove the trailing space
+  if (result.back() == ' ')
+  {
+    result.pop_back();
+  }
+  
+  // Close any open delimiters
+  while (!open_delimiters.empty())
+  {
+    switch (open_delimiters.top())
+    {
+      case parentype::paren: result.append(")"); break;
+      case parentype::square_bracket: result.append("]"); break;
+      case parentype::asterisk: result.append("*"); break;
+      case parentype::quote: result.append("\""); break;
     }
     
-    std::cout << std::endl;
-
-    cur.push_back(next.word);
-		
-    result.push_back(nextToken);
+    open_delimiters.pop();
   }
-	
-  return result;
-}
-
-bool removeIf(char c)
-{
-  return !((c != '.') && (c != '?') && (c != '!') && (c != ',') /*&& (c != '"') && (c != '(') && (c != ')') && (c != '\n')*/);
-}
-
-std::string canonize(std::string f)
-{
-  std::string canonical(f);
-  std::transform(canonical.begin(), canonical.end(), canonical.begin(), ::tolower);
-  
-  std::string result;
-  std::remove_copy_if(canonical.begin(), canonical.end(), std::back_inserter(result), removeIf);
 	
   return result;
 }

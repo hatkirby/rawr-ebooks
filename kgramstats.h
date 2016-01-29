@@ -2,61 +2,89 @@
 #include <map>
 #include <list>
 #include <vector>
-#include "malaprop.h"
+#include "histogram.h"
 
 #ifndef KGRAMSTATS_H
 #define KGRAMSTATS_H
 
-enum tokentype {
-  tokentype_literal,
-  tokentype_hashtag
-};
-
-struct token {
-  tokentype type;
+struct word {
   std::string canon;
-  bool terminating;
+  histogram<std::string> forms;
+  histogram<std::string> terms;
   
-  token(std::string canon) : type(tokentype_literal), canon(canon), terminating(false) {}
-  token(tokentype type) : type(type), canon(""), terminating(false) {}
+  word(std::string canon) : canon(canon) {}
   
-  bool operator<(const token& other) const
+  bool operator<(const word& other) const
   {
-    if (type != other.type)
-    {
-      return type < other.type;
-    } else if (type == tokentype_literal)
-    {
-      if (canon == other.canon)
-      {
-        return !terminating && other.terminating;
-      } else {
-        return canon < other.canon;
-      }
-    } else {
-      return !terminating && other.terminating;
-    }
+    return canon < other.canon;
   }
 };
 
-enum querytype {
-  querytype_literal,
-  querytype_sentence
+extern word blank_word;
+
+enum class suffixtype {
+  none,
+  terminating,
+  comma
+};
+
+enum class parentype {
+  paren,
+  square_bracket,
+  asterisk,
+  quote
+};
+
+enum class doublestatus {
+  opening,
+  closing,
+  both
+};
+
+struct delimiter {
+  parentype type;
+  doublestatus status;
+  
+  delimiter(parentype type, doublestatus status) : type(type), status(status) {}
+  
+  bool operator<(const delimiter& other) const
+  {
+    return std::tie(type, status) < std::tie(other.type, other.status);
+  }
+};
+
+struct token {
+  const word& w;
+  std::map<delimiter, int> delimiters;
+  suffixtype suffix;
+  std::string raw;
+    
+  token(const word& w) : w(w), suffix(suffixtype::none) {}
+  
+  bool operator<(const token& other) const
+  {
+    return std::tie(w, delimiters, suffix) < std::tie(other.w, other.delimiters, other.suffix);
+  }
+};
+
+enum class querytype {
+  literal,
+  sentence
 };
 
 struct query {
   querytype type;
-  token word;
+  token tok;
   
-  query(token word) : word(word), type(querytype_literal) {}
+  query(token tok) : tok(tok), type(querytype::literal) {}
   
-  query(querytype type) : word(""), type(type) {}
+  query(querytype type) : tok(blank_word), type(type) {}
   
   bool operator<(const query& other) const
   {
     if (type == other.type)
     {
-      return word < other.word;
+      return tok < other.tok;
     } else {
       return type < other.type;
     }
@@ -65,34 +93,11 @@ struct query {
 
 typedef std::list<query> kgram;
 
-struct termstats {
-  char terminator;
-  int occurrences;
-  
-  termstats() : terminator('.'), occurrences(1) {}
-  
-  termstats(char terminator, int occurrences)
-  {
-    this->terminator = terminator;
-    this->occurrences = occurrences;
-  }
-  
-  bool operator<(const termstats& other) const
-  {
-    if (terminator == other.terminator)
-    {
-      return occurrences < other.occurrences;
-    } else {
-      return terminator < other.terminator;
-    }
-  }
-};
-
 class kgramstats
 {
 public:
 	kgramstats(std::string corpus, int maxK);
-	std::vector<std::string> randomSentence(int n);
+	std::string randomSentence(int n);
 	
 private:
 	struct token_data
@@ -100,16 +105,15 @@ private:
 		int all;
 		int titlecase;
 		int uppercase;
-    token word;
+    token tok;
     
-    token_data() : word(""), all(0), titlecase(0), uppercase(0) {}
+    token_data(token tok) : tok(tok), all(0), titlecase(0), uppercase(0) {}
 	};
   
 	int maxK;
 	std::map<kgram, std::map<int, token_data> > stats;
-  malaprop mstats;
-  std::map<token, std::map<int, termstats> > endings;
-  std::vector<std::string> hashtags;
+  word hashtags {"#hashtag"};
+  std::map<std::string, word> words;
 };
 
 void printKgram(kgram k);

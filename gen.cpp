@@ -52,20 +52,9 @@ int main(int argc, char** args)
   std::cout << "Generating..." << std::endl;
   for (;;)
   {
-    std::vector<std::string> doc = stats->randomSentence(rand() % 35 + 15);
-    std::string hi;
-    for (std::vector<std::string>::iterator it = doc.begin(); it != doc.end(); ++it)
-    {
-      hi += vars->parse(*it) + " ";
-    }
-    
+    std::string doc = stats->randomSentence(rand() % 35 + 15);
+    std::string hi = vars->parse(doc);
     hi.resize(140);
-
-    size_t lastperiod = hi.find_last_of(".!?,");
-    if ((lastperiod != std::string::npos) && (rand() % 3 > 0))
-    {
-      hi = hi.substr(0, lastperiod+1);
-    }
 
     std::cout << hi << std::endl;
 		
