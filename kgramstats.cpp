@@ -39,6 +39,9 @@
 #include <algorithm>
 #include <set>
 #include <stack>
+#include "freevars.h"
+#include <fstream>
+#include "prefix_search.h"
 
 query wildcardQuery {querytype::sentence};
 word blank_word {""};
@@ -53,14 +56,55 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   size_t start = 0;
   int end = 0;
   std::set<std::string> thashtags;
+  freevar fv_emoticons {emoticons, "emoticons.txt"};
+  
+  std::cout << "Reading emojis..." << std::endl;
+  prefix_search emojis;
+  std::ifstream emoji_file("emojis.txt");
+  if (emoji_file)
+  {
+    while (!emoji_file.eof())
+    {
+      std::string rawmojis;
+      getline(emoji_file, rawmojis);
+      emojis.add(rawmojis);
+    }
+    
+    emoji_file.close();
+  }
 
+  std::cout << "Tokenizing corpus..." << std::endl;
   while (end != std::string::npos)
   {
     end = corpus.find(" ", start);
 
-    std::string t = corpus.substr(start, (end == std::string::npos) ? std::string::npos : end - start);
-    if (t.compare("") && t.compare("."))
+    bool emoji = false;
+    std::string te = corpus.substr(start, (end == std::string::npos) ? std::string::npos : end - start);
+    std::string t = "";
+    
+    if (te.compare("") && te.compare("."))
     {
+      // Extract strings of emojis into their own tokens even if they're not space delimited
+      int m = emojis.match(te);
+      emoji = m > 0;
+      if (m == 0) m = 1;
+      t = te.substr(0,m);
+      te = te.substr(m);
+      
+      while (!te.empty())
+      {
+        m = emojis.match(te);
+        if (emoji == (m > 0))
+        {
+          if (m == 0) m = 1;
+          t += te.substr(0,m);
+          te = te.substr(m);
+        } else {
+          end = start + t.length() - 1;
+          break;
+        }
+      }
+      
       std::string tc(t), canonical;
       std::transform(tc.begin(), tc.end(), tc.begin(), ::tolower);
       std::remove_copy_if(tc.begin(), tc.end(), std::back_inserter(canonical), [=] (char c) {
@@ -72,9 +116,27 @@ kgramstats::kgramstats(std::string corpus, int maxK)
         if (canonical[0] == '#')
         {
           thashtags.insert(canonical);
-          canonical = "#hashtag";
           
           return hashtags;
+        }
+        
+        // Emoticon freevar
+        if (emoji)
+        {
+          emoticons.forms.add(canonical);
+          
+          return emoticons;
+        }
+        
+        std::string emoticon_canon;
+        std::remove_copy_if(tc.begin(), tc.end(), std::back_inserter(emoticon_canon), [=] (char c) {
+          return !((c != '.') && (c != '?') && (c != '!') && (c != ',') && (c != '"') && (c != '\n') && (c != '[') && (c != ']') && (c != '*'));
+        });
+        if (fv_emoticons.check(emoticon_canon))
+        {
+          emoticons.forms.add(emoticon_canon);
+          
+          return emoticons;
         }
         
         // Basically any other word
@@ -171,6 +233,7 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   }
   
   // Time to condense the distribution stuff for the words
+  std::cout << "Compiling token histograms..." << std::endl;
   for (auto& it : words)
   {
     it.second.forms.compile();
@@ -185,8 +248,13 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   
   hashtags.forms.compile();
   hashtags.terms.compile();
+  
+  // Compile other freevars
+  emoticons.forms.compile();
+  emoticons.terms.compile();
 
   // kgram distribution
+  std::cout << "Creating markov chain..." << std::endl;
   std::map<kgram, std::map<token, token_data> > tstats;
   for (int k=1; k<maxK; k++)
   {
@@ -246,6 +314,7 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   }
 	
   // Condense the kgram distribution
+  std::cout << "Compiling kgram distributions..." << std::endl;
   for (auto& it : tstats)
   {
     kgram klist = it.first;
@@ -453,6 +522,36 @@ std::string kgramstats::randomSentence(int n)
     }
     
     open_delimiters.pop();
+  }
+  
+  // Replace old-style freevars while I can't be bothered to remake the corpus yet
+  std::vector<std::string> fv_names;
+  std::ifstream namefile("names.txt");
+  while (!namefile.eof())
+  {
+    std::string l;
+    getline(namefile, l);
+    fv_names.push_back(l);
+  }
+  
+  int cpos;
+  while ((cpos = result.find("$name$")) != std::string::npos)
+  {
+    result.replace(cpos, 6, fv_names[rand() % fv_names.size()]);
+  }
+  
+  std::vector<std::string> fv_nouns;
+  std::ifstream nounfile("nouns.txt");
+  while (!nounfile.eof())
+  {
+    std::string l;
+    getline(nounfile, l);
+    fv_nouns.push_back(l);
+  }
+  
+  while ((cpos = result.find("$noun$")) != std::string::npos)
+  {
+    result.replace(cpos, 6, fv_nouns[rand() % fv_nouns.size()]);
   }
 	
   return result;

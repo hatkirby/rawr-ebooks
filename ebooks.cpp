@@ -10,7 +10,6 @@
 #include <twitcurl.h>
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
-#include "freevars.h"
 
 int main(int argc, char** args)
 {
@@ -29,11 +28,6 @@ int main(int argc, char** args)
 
   std::cout << "Preprocessing corpus..." << std::endl;
   kgramstats* stats = new kgramstats(corpus, 4);
-    
-  std::cout << "Preprocessing freevars..." << std::endl;
-  freevars* vars = new freevars();
-  vars->addVar("name", "names.txt");
-  vars->addVar("noun", "nouns.txt");
   
   twitCurl twitter;
   twitter.getOAuth().setConsumerKey(config["consumer_key"].as<std::string>());
@@ -45,7 +39,7 @@ int main(int argc, char** args)
   for (;;)
   {
     std::string doc = stats->randomSentence(rand() % 45 + 5);
-    std::string hi = vars->parse(doc);
+    std::string hi = doc;
     hi.resize(140);
     
     std::string replyMsg;

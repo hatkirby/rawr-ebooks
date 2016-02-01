@@ -112,8 +112,11 @@ private:
   
 	int maxK;
 	std::map<kgram, std::map<int, token_data> > stats;
-  word hashtags {"#hashtag"};
+  
+  // Words
   std::map<std::string, word> words;
+  word hashtags {"#hashtag"};
+  word emoticons {"👌"};
 };
 
 void printKgram(kgram k);

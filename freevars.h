@@ -1,19 +1,22 @@
-#include <map>
 #include <string>
-#include <vector>
+#include <set>
 
 #ifndef FREEVARS_H
 #define FREEVARS_H
 
-class freevars
+class word;
+
+class freevar
 {
-public:
-    freevars();
-    void addVar(std::string name, std::string filename);
-    std::string parse(std::string in);
+  public:
+    freevar(word& w, std::string file);
+    bool check(std::string f) const;
+    void add(std::string f);
+    word& getWord();
     
-private:
-    std::map<std::string, std::vector<std::string>* >* vars;
+  private:
+    word& w;
+    std::set<std::string> instances;
 };
 
 #endif

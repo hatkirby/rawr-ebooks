@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include "freevars.h"
 
 int main(int argc, char** args)
 {
@@ -44,16 +43,11 @@ int main(int argc, char** args)
   std::cout << "Preprocessing corpus..." << std::endl;
   kgramstats* stats = new kgramstats(corpus, 4);
     
-  std::cout << "Preprocessing freevars..." << std::endl;
-  freevars* vars = new freevars();
-  vars->addVar("name", "names.txt");
-  vars->addVar("noun", "nouns.txt");
-    
   std::cout << "Generating..." << std::endl;
   for (;;)
   {
     std::string doc = stats->randomSentence(rand() % 35 + 15);
-    std::string hi = vars->parse(doc);
+    std::string hi = doc;
     hi.resize(140);
 
     std::cout << hi << std::endl;

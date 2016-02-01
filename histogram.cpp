@@ -1,5 +1,6 @@
 #include "histogram.h"
 #include <cstdlib>
+#include <iostream>
 
 template <class T>
 void histogram<T>::add(const T& inst)
@@ -29,6 +30,15 @@ const T& histogram<T>::next() const
   int r = rand() % max;
   
   return distribution.upper_bound(r)->second;
+}
+
+template <class T>
+void histogram<T>::print() const
+{
+  for (auto& freqpair : freqtable)
+  {
+    std::cout << freqpair.first << ": " << freqpair.second << std::endl;
+  }
 }
 
 template class histogram <std::string>;

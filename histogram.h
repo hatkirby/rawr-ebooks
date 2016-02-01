@@ -10,6 +10,7 @@ class histogram {
     void add(const T& inst);
     void compile();
     const T& next() const;
+    void print() const;
     
   private:
     std::map<T, int> freqtable;
