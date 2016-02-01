@@ -468,6 +468,8 @@ std::string kgramstats::randomSentence(int n)
               case parentype::asterisk: result = "*" + result; break;
               case parentype::quote: result = "\"" + result; break;
             }
+          } else {
+            open_delimiters.pop();
           }
           
           switch (dt.first.type)
