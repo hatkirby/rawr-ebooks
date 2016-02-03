@@ -105,11 +105,16 @@ kgramstats::kgramstats(std::string corpus, int maxK)
         }
       }
       
-      std::string tc(t), canonical;
+      std::string tc(t);
       std::transform(tc.begin(), tc.end(), tc.begin(), ::tolower);
-      std::remove_copy_if(tc.begin(), tc.end(), std::back_inserter(canonical), [=] (char c) {
-        return !((c != '.') && (c != '?') && (c != '!') && (c != ',') && (c != '"') && (c != '(') && (c != ')') && (c != '\n') && (c != '[') && (c != ']') && (c != '*'));
-      });
+
+      int pst = tc.find_first_not_of("\"([*");
+      int dst = tc.find_last_not_of("\")]*.,?!\n");
+      std::string canonical("");
+      if ((pst != std::string::npos) && (dst != std::string::npos))
+      {
+        canonical = std::string(tc, pst, dst - pst + 1);
+      }
       
       word& w = ([&] () -> word& {
         // Hashtag freevar
@@ -128,15 +133,15 @@ kgramstats::kgramstats(std::string corpus, int maxK)
           return emoticons;
         }
         
-        std::string emoticon_canon;
-        std::remove_copy_if(tc.begin(), tc.end(), std::back_inserter(emoticon_canon), [=] (char c) {
-          return !((c != '.') && (c != '?') && (c != '!') && (c != ',') && (c != '"') && (c != '\n') && (c != '[') && (c != ']') && (c != '*'));
-        });
-        if (fv_emoticons.check(emoticon_canon))
+        if ((pst != std::string::npos) && (dst != std::string::npos))
         {
-          emoticons.forms.add(emoticon_canon);
+          std::string emoticon_canon(t, pst, t.find_last_not_of("\"]*\n.,?!") - pst + 1);
+          if (fv_emoticons.check(emoticon_canon))
+          {
+            emoticons.forms.add(emoticon_canon);
           
-          return emoticons;
+            return emoticons;
+          }
         }
         
         // Basically any other word
