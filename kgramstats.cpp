@@ -36,6 +36,7 @@
 #include <vector>
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <set>
 #include <stack>
