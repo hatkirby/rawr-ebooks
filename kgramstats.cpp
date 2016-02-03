@@ -60,6 +60,12 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   freevar fv_emoticons {emoticons, "emoticons.txt"};
   std::map<std::string, std::string> canonical_form;
   
+  // Ensure the old-style freevars exist
+  canonical_form["$name$"] = "$name$";
+  words.emplace("$name$", std::string("$name$"));
+  canonical_form["$noun$"] = "$noun$";
+  words.emplace("$noun$", std::string("$noun$"));
+  
   AspellConfig* spell_config = new_aspell_config();
   AspellCanHaveError* possible_err = new_aspell_speller(spell_config);
   if (aspell_error_number(possible_err) != 0)
