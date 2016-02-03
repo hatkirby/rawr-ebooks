@@ -42,6 +42,7 @@
 #include "freevars.h"
 #include <fstream>
 #include "prefix_search.h"
+#include <aspell.h>
 
 query wildcardQuery {querytype::sentence};
 word blank_word {""};
@@ -57,6 +58,17 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   int end = 0;
   std::set<std::string> thashtags;
   freevar fv_emoticons {emoticons, "emoticons.txt"};
+  std::map<std::string, std::string> canonical_form;
+  
+  AspellConfig* spell_config = new_aspell_config();
+  AspellCanHaveError* possible_err = new_aspell_speller(spell_config);
+  if (aspell_error_number(possible_err) != 0)
+  {
+    std::cout << "aspell error: " << aspell_error_message(possible_err) << std::endl;
+    exit(1);
+  }
+  
+  AspellSpeller* spell_checker = to_aspell_speller(possible_err);
   
   std::cout << "Reading emojis..." << std::endl;
   prefix_search emojis;
@@ -145,12 +157,47 @@ kgramstats::kgramstats(std::string corpus, int maxK)
         }
         
         // Basically any other word
-        if (words.count(canonical) == 0)
+        if (canonical_form.count(canonical) == 0)
         {
-          words.emplace(canonical, canonical);
+          if (canonical.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") == std::string::npos)
+          {
+            // Words with no letters will be mangled by the spell checker
+            canonical_form[canonical] = canonical;
+            words.emplace(canonical, canonical);
+          } else {
+            int correct = aspell_speller_check(spell_checker, canonical.c_str(), canonical.size());
+            if (correct)
+            {
+              words.emplace(canonical, canonical);
+              canonical_form[canonical] = canonical;
+            } else {
+              const AspellWordList* suggestions = aspell_speller_suggest(spell_checker, canonical.c_str(), canonical.size());
+              AspellStringEnumeration* elements = aspell_word_list_elements(suggestions);
+              const char* replacement = aspell_string_enumeration_next(elements);
+              if (replacement != NULL)
+              {
+                aspell_speller_store_replacement(spell_checker, canonical.c_str(), canonical.size(), replacement, strlen(replacement));
+            
+                std::string sugrep(replacement);
+                canonical_form[canonical] = sugrep;
+          
+                if (words.count(sugrep) == 0)
+                {
+                  words.emplace(sugrep, sugrep);
+                }
+              } else {
+                aspell_speller_add_to_session(spell_checker, canonical.c_str(), canonical.size());
+            
+                words.emplace(canonical, canonical);
+                canonical_form[canonical] = canonical;
+              }
+          
+              delete_aspell_string_enumeration(elements);
+            }
+          }
         }
         
-        word& tw = words.at(canonical);
+        word& tw = words.at(canonical_form.at(canonical));
         tw.forms.add(canonical);
         
         return tw;
@@ -236,6 +283,12 @@ kgramstats::kgramstats(std::string corpus, int maxK)
 
     start = ((end > (std::string::npos - 1) ) ? std::string::npos : end + 1);
   }
+  
+  delete_aspell_speller(spell_checker);
+  delete_aspell_config(spell_config);
+  
+  std::cout << canonical_form.size() << " distinct forms" << std::endl;
+  std::cout << words.size() << " distinct words" << std::endl;
   
   // Time to condense the distribution stuff for the words
   std::cout << "Compiling token histograms..." << std::endl;
