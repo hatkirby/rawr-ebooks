@@ -423,7 +423,7 @@ std::string kgramstats::randomSentence(int n)
 {
   std::string result;
   kgram cur(1, wildcardQuery);
-  int cuts = 0;
+  bool cut = false;
   std::stack<parentype> open_delimiters;
 	
   for (int i=0; i<n; i++)
@@ -433,23 +433,10 @@ std::string kgramstats::randomSentence(int n)
       cur.pop_front();
     }
     
-    if (cur.size() > 0)
+    if ((cur.size() > 0) && cut)
     {
-      if (rand() % (maxK - cur.size() + 1) == 0)
-      {
-        while (cur.size() > 2)
-        {
-          if ((rand() % (n)) < cuts)
-          {
-            cur.pop_front();
-            cuts--;
-          } else {
-            break;
-          }
-        }
-      }
-      
-      cuts++;
+      cur.pop_front();
+      cut = false;
     }
     
     // Gotta circumvent the last line of the input corpus
@@ -568,6 +555,11 @@ std::string kgramstats::randomSentence(int n)
     if ((next.tok.suffix == suffixtype::terminating) && (rand() % 4 == 0))
     {
       break;
+    }
+    
+    if (next.all == max)
+    {
+      cut = true;
     }
   }
   
