@@ -557,7 +557,7 @@ std::string kgramstats::randomSentence(int n)
       break;
     }
     
-    if (next.all == max)
+    if ((next.all == max) && (rand() % 3 == 0))
     {
       cut = true;
     }
