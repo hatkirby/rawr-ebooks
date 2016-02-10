@@ -437,9 +437,9 @@ std::string kgramstats::randomSentence(int n)
     {
       if (rand() % (maxK - cur.size() + 1) == 0)
       {
-        while (cur.size() > 2)
+        while ((cur.size() > 2) && (cuts > 0))
         {
-          if ((rand() % (n)) < cuts)
+          if ((rand() % cuts) > 2)
           {
             cur.pop_front();
             cuts--;
@@ -448,8 +448,6 @@ std::string kgramstats::randomSentence(int n)
           }
         }
       }
-      
-      cuts++;
     }
     
     // Gotta circumvent the last line of the input corpus
@@ -555,6 +553,12 @@ std::string kgramstats::randomSentence(int n)
     } else if (next.tok.suffix == suffixtype::comma)
     {
       nextToken.append(",");
+    }
+    
+    // If this pick was guaranteed, increase cut chance
+    if (next.all == max)
+    {
+      cuts++;
     }
 		
     /* DEBUG */
