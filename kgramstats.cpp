@@ -344,21 +344,12 @@ kgramstats::kgramstats(std::string corpus, int maxK)
         td.titlecase++;
       }
       
-      kgram term_prefix;
-      bool changed = false;
-      std::transform(prefix.begin(), prefix.end(), std::back_inserter(term_prefix), [&] (query& q) {
-        if (q.tok.suffix == suffixtype::terminating)
-        {
-          changed = true;
-          
-          return wildcardQuery;
-        } else {
-          return q;
-        }
-      });
-      
-      if (changed)
+      if (std::begin(prefix)->tok.suffix == suffixtype::terminating)
       {
+        kgram term_prefix(prefix);
+        term_prefix.pop_front();
+        term_prefix.push_front(wildcardQuery);
+        
         if (tstats[term_prefix].count(f) == 0)
         {
           tstats[term_prefix].emplace(f, f);
