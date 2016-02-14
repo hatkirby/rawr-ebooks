@@ -162,7 +162,7 @@ kgramstats::kgramstats(std::string corpus, int maxK)
         {
           if (
             // Legacy freevars should be distinct from tokens containing similar words
-            (canonical.find_first_of("$name$") != std::string::npos) || (canonical.find_first_of("$noun$") != std::string::npos)              
+            (canonical.find("$name$") != std::string::npos) || (canonical.find("$noun$") != std::string::npos)
             // Words with no letters will be mangled by the spell checker
             || (canonical.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") == std::string::npos)
             )
