@@ -426,9 +426,9 @@ std::string kgramstats::randomSentence(int n)
     {
       if (rand() % (maxK - cur.size() + 1) == 0)
       {
-        while ((cur.size() > 2) && (cuts > 0))
+        while ((cur.size() > 1) && (cuts > 0))
         {
-          if ((rand() % cuts) > 2)
+          if ((rand() % cuts) > (maxK - cur.size() + 1))
           {
             cur.pop_front();
             cuts--;
