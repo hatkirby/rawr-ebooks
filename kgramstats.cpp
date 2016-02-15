@@ -432,7 +432,7 @@ std::string kgramstats::randomSentence(int n)
           if ((rand() % cuts) > (under * under))
           {
             cur.pop_front();
-            cuts--;
+            cuts -= under * under;
           } else {
             break;
           }
