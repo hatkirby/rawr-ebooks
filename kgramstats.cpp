@@ -162,7 +162,7 @@ kgramstats::kgramstats(std::string corpus, int maxK)
         {
           if (
             // Legacy freevars should be distinct from tokens containing similar words
-            (canonical.find("$name$") != std::string::npos) || (canonical.find("$noun$") != std::string::npos)
+            (canonical.find("$name$") != std::string::npos)
             // Words with no letters will be mangled by the spell checker
             || (canonical.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") == std::string::npos)
             )
@@ -588,31 +588,20 @@ std::string kgramstats::randomSentence(int n)
   // Replace old-style freevars while I can't be bothered to remake the corpus yet
   std::vector<std::string> fv_names;
   std::ifstream namefile("names.txt");
-  while (!namefile.eof())
+  if (namefile.is_open())
   {
-    std::string l;
-    getline(namefile, l);
-    fv_names.push_back(l);
-  }
+    while (!namefile.eof())
+    {
+      std::string l;
+      getline(namefile, l);
+      fv_names.push_back(l);
+    }
   
-  int cpos;
-  while ((cpos = result.find("$name$")) != std::string::npos)
-  {
-    result.replace(cpos, 6, fv_names[rand() % fv_names.size()]);
-  }
-  
-  std::vector<std::string> fv_nouns;
-  std::ifstream nounfile("nouns.txt");
-  while (!nounfile.eof())
-  {
-    std::string l;
-    getline(nounfile, l);
-    fv_nouns.push_back(l);
-  }
-  
-  while ((cpos = result.find("$noun$")) != std::string::npos)
-  {
-    result.replace(cpos, 6, fv_nouns[rand() % fv_nouns.size()]);
+    int cpos;
+    while ((cpos = result.find("$name$")) != std::string::npos)
+    {
+      result.replace(cpos, 6, fv_names[rand() % fv_names.size()]);
+    }
   }
 	
   return result;
