@@ -80,6 +80,11 @@ kgramstats::kgramstats(std::string corpus, int maxK)
     {
       std::string rawmojis;
       getline(emoji_file, rawmojis);
+      if (rawmojis.back() == '\r')
+      {
+        rawmojis.pop_back();
+      }
+    
       emojis.add(rawmojis);
     }
     
@@ -594,6 +599,11 @@ std::string kgramstats::randomSentence(int n)
     {
       std::string l;
       getline(namefile, l);
+      if (l.back() == '\r')
+      {
+        l.pop_back();
+      }
+      
       fv_names.push_back(l);
     }
   

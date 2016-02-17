@@ -37,6 +37,11 @@ int main(int argc, char** args)
   std::string line;
   while (getline(infile, line))
   {
+    if (line.back() == '\r')
+    {
+      line.pop_back();
+    }
+    
     corpus += line + "\n ";
   }
 	
