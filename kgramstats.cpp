@@ -429,18 +429,21 @@ std::string kgramstats::randomSentence(int n)
     
     if (cur.size() > 0)
     {
-      if (rand() % (maxK - cur.size() + 1) == 0)
+      while ((cur.size() > 1) && (cuts > 0))
       {
-        while ((cur.size() > 1) && (cuts > 0))
+        int under = maxK - cur.size();
+        int tunder = i - 1;
+        for (int j = 0; j < under; j++)
         {
-          int under = maxK - cur.size() + 1;
-          if ((rand() % cuts) > (under * under))
-          {
-            cur.pop_front();
-            cuts -= under * under;
-          } else {
-            break;
-          }
+          tunder /= 2;
+        }
+        
+        if ((rand() % cuts) < tunder)
+        {
+          cur.pop_front();
+          cuts -= under;
+        } else {
+          break;
         }
       }
     }
