@@ -91,9 +91,23 @@ kgramstats::kgramstats(std::string corpus, int maxK)
     emoji_file.close();
   }
 
-  std::cout << "Tokenizing corpus..." << std::endl;
+  std::cout << "Tokenizing corpus...   0%" << std::flush;
+  int len = corpus.length();
+  int per = 0;
+  int perprime = 0;
+  std::cout.fill(' ');
   while (end != std::string::npos)
   {
+    perprime = end * 100 / len;
+    if (perprime != per)
+    {
+      per = perprime;
+      
+      std::cout << "\b\b\b\b" << std::right;
+      std::cout.width(3);
+      std::cout << per << "%" << std::flush;
+    }
+    
     end = corpus.find(" ", start);
 
     bool emoji = false;
@@ -294,6 +308,8 @@ kgramstats::kgramstats(std::string corpus, int maxK)
     start = ((end > (std::string::npos - 1) ) ? std::string::npos : end + 1);
   }
   
+  std::cout << "\b\b\b\b100%" << std::endl;
+  
   delete_aspell_speller(spell_checker);
   delete_aspell_config(spell_config);
   
@@ -322,12 +338,25 @@ kgramstats::kgramstats(std::string corpus, int maxK)
   emoticons.terms.compile();
 
   // kgram distribution
-  std::cout << "Creating markov chain..." << std::endl;
+  std::cout << "Creating markov chain...   0%" << std::flush;
   std::map<kgram, std::map<token, token_data> > tstats;
+  len = (maxK-1) * tokens.size();
+  per = 0;
+  perprime = 0;
   for (int k=1; k<maxK; k++)
   {
     for (int i=0; i<(tokens.size() - k); i++)
     {
+      perprime = (((k-1)*tokens.size())+i) * 100 / len;
+      if (perprime != per)
+      {
+        per = perprime;
+      
+        std::cout << "\b\b\b\b" << std::right;
+        std::cout.width(3);
+        std::cout << per << "%" << std::flush;
+      }
+      
       kgram prefix(tokens.begin()+i, tokens.begin()+i+k);
       token f = tokens[i+k];
 
@@ -371,11 +400,28 @@ kgramstats::kgramstats(std::string corpus, int maxK)
       }
     }
   }
-	
+  
+  std::cout << "\b\b\b\b100%" << std::endl;
+
   // Condense the kgram distribution
-  std::cout << "Compiling kgram distributions..." << std::endl;
+  std::cout << "Compiling kgram distributions...   0%";
+  len = tstats.size();
+  per = 0;
+  perprime = 0;
+  int indicator = 0;
   for (auto& it : tstats)
   {
+    indicator++;
+    perprime = indicator * 100 / len;
+    if (per != perprime)
+    {
+      per = perprime;
+    
+      std::cout << "\b\b\b\b" << std::right;
+      std::cout.width(3);
+      std::cout << per << "%" << std::flush;
+    }
+    
     kgram klist = it.first;
     auto& probtable = it.second;
     auto& distribution = stats[klist];
@@ -388,6 +434,8 @@ kgramstats::kgramstats(std::string corpus, int maxK)
       distribution.emplace(max, kt.second);
     }
   }
+  
+  std::cout << "\b\b\b\b100%" << std::endl;
 }
 
 void printKgram(kgram k)
