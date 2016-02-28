@@ -200,8 +200,6 @@ kgramstats::kgramstats(std::string corpus, int maxK)
               const char* replacement = aspell_string_enumeration_next(elements);
               if (replacement != NULL)
               {
-                aspell_speller_store_replacement(spell_checker, canonical.c_str(), canonical.size(), replacement, strlen(replacement));
-            
                 std::string sugrep(replacement);
                 canonical_form[canonical] = sugrep;
           
@@ -210,8 +208,6 @@ kgramstats::kgramstats(std::string corpus, int maxK)
                   words.emplace(sugrep, sugrep);
                 }
               } else {
-                aspell_speller_add_to_session(spell_checker, canonical.c_str(), canonical.size());
-            
                 words.emplace(canonical, canonical);
                 canonical_form[canonical] = canonical;
               }
