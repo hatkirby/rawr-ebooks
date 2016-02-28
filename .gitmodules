@@ -1,3 +1,6 @@
 [submodule "vendor/twitcurl"]
 	path = vendor/twitcurl
 	url = https://github.com/swatkat/twitcurl
+[submodule "vendor/yaml-cpp"]
+	path = vendor/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp
