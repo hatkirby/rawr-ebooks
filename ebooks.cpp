@@ -56,8 +56,37 @@ int main(int argc, char** args)
       twitter.getLastCurlError(replyMsg);
       std::cout << "Curl error: " << replyMsg << std::endl;
     }
+    
+    int waitlen = rand() % delay;
+    if (waitlen == 0)
+    {
+      continue;
+    } else if (waitlen == 1)
+    {
+      std::cout << "Sleeping for 1 second..." << std::endl;
+    } else if (waitlen < 60)
+    {
+      std::cout << "Sleeping for " << waitlen << " seconds..." << std::endl;
+    } else if (waitlen == 60)
+    {
+      std::cout << "Sleeping for 1 minute..." << std::endl;
+    } else if (waitlen < 60*60)
+    {
+      std::cout << "Sleeping for " << (waitlen/60) << " minutes..." << std::endl;
+    } else if (waitlen == 60*60)
+    {
+      std::cout << "Sleeping for 1 hour..." << std::endl;
+    } else if (waitlen < 60*60*24)
+    {
+      std::cout << "Sleeping for " << (waitlen/60/60) << " hours..." << std::endl;
+    } else if (waitlen == 60*60*24)
+    {
+      std::cout << "Sleeping for 1 day..." << std::endl;
+    } else {
+      std::cout << "Sleeping for " << (waitlen/60/60/24) << " days..." << std::endl;
+    }
 
-    sleep(rand() % delay);
+    sleep(waitlen);
   }
 	
   return 0;
