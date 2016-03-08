@@ -457,7 +457,7 @@ void printKgram(kgram k)
 }
 
 // runs in O(n log t) time where n is the input number of sentences and t is the number of tokens in the input corpus
-std::string kgramstats::randomSentence(int max)
+std::string kgramstats::randomSentence(int maxL)
 {
   std::string result;
   kgram cur(1, wildcardQuery);
@@ -613,7 +613,7 @@ std::string kgramstats::randomSentence(int max)
     }
     
     // Went over the limit, so reset
-    if (result.length() > max)
+    if (result.length() > maxL)
     {
       result = "";
       cur = kgram(1, wildcardQuery);
