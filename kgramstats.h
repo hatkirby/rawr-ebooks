@@ -97,7 +97,7 @@ class kgramstats
 {
 public:
 	kgramstats(std::string corpus, int maxK);
-	std::string randomSentence(int n);
+	std::string randomSentence(int max);
 	
 private:
 	struct token_data

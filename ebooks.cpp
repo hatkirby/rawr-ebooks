@@ -43,7 +43,7 @@ int main(int argc, char** args)
   std::cout << "Generating..." << std::endl;
   for (;;)
   {
-    std::string doc = stats->randomSentence(rand() % 45 + 5);
+    std::string doc = stats->randomSentence(140);
     std::string hi = doc;
     hi.resize(140);
     
