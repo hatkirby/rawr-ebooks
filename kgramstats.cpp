@@ -607,22 +607,9 @@ std::string kgramstats::randomSentence(int maxL)
 		
     result.append(nextToken + " ");
     
-    if ((next.tok.suffix == suffixtype::terminating) && (rand() % 4 == 0))
+    if ((next.tok.suffix == suffixtype::terminating) && ((result.length() > maxL) || (rand() % 4 == 0)))
     {
       break;
-    }
-    
-    // Went over the limit, so reset
-    if (result.length() > maxL)
-    {
-      result = "";
-      cur = kgram(1, wildcardQuery);
-      cuts = 0;
-      
-      while (!open_delimiters.empty())
-      {
-        open_delimiters.pop();
-      }
     }
   }
   
