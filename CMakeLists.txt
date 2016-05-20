@@ -9,7 +9,7 @@ include_directories(vendor/libtwittercpp/src vendor/libtwittercpp/vendor/json/sr
 add_subdirectory(vendor/yaml-cpp EXCLUDE_FROM_ALL)
 include_directories(vendor/yaml-cpp/include)
 
-find_package(aspell REQUIRED)
+find_package(ASPELL REQUIRED)
 include_directories(${ASPELL_INCLUDE_DIR})
 
 add_executable(rawr-ebooks ebooks.cpp kgramstats.cpp freevars.cpp histogram.cpp prefix_search.cpp)
