@@ -59,6 +59,7 @@ int main(int argc, char** args)
         {
           std::lock_guard<std::mutex> stats_lock(stats_mutex);
           doc += stats->randomSentence(140 - doc.length());
+          doc.resize(140);
         }
         
         twitter::tweet tw;
