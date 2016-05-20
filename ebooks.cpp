@@ -3,20 +3,29 @@
 #include <map>
 #include "kgramstats.h"
 #include <ctime>
-#include <vector>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <twitcurl.h>
-#include <unistd.h>
+#include <twitter.h>
 #include <yaml-cpp/yaml.h>
+#include <thread>
+#include <chrono>
 
 int main(int argc, char** args)
 {
   srand(time(NULL));
+  rand(); rand(); rand(); rand();
 	
   YAML::Node config = YAML::LoadFile("config.yml");
   int delay = config["delay"].as<int>();
+  
+  twitter::auth auth;
+  auth.setConsumerKey(config["consumer_key"].as<std::string>());
+  auth.setConsumerSecret(config["consumer_secret"].as<std::string>());
+  auth.setAccessKey(config["access_key"].as<std::string>());
+  auth.setAccessSecret(config["access_secret"].as<std::string>());
+  
+  twitter::client client(auth);
 
   std::ifstream infile(config["corpus"].as<std::string>().c_str());
   std::string corpus;
@@ -33,28 +42,53 @@ int main(int argc, char** args)
 
   std::cout << "Preprocessing corpus..." << std::endl;
   kgramstats* stats = new kgramstats(corpus, 4);
+  std::mutex stats_mutex;
   
-  twitCurl twitter;
-  twitter.getOAuth().setConsumerKey(config["consumer_key"].as<std::string>());
-  twitter.getOAuth().setConsumerSecret(config["consumer_secret"].as<std::string>());
-  twitter.getOAuth().setOAuthTokenKey(config["access_key"].as<std::string>());
-  twitter.getOAuth().setOAuthTokenSecret(config["access_secret"].as<std::string>());
+  client.setUserStreamNotifyCallback([&] (twitter::notification n) {
+    if (n.getType() == twitter::notification::type::tweet)
+    {
+      std::string original = n.getTweet().getText();
+      std::string canonical;
+      std::transform(std::begin(original), std::end(original), std::back_inserter(canonical), [] (char ch) {
+        return std::tolower(ch);
+      });
+      
+      if (canonical.find("@rawr_ebooks") != std::string::npos)
+      {
+        std::string doc = "@" + n.getTweet().getAuthor().getScreenName() + " ";
+        {
+          std::lock_guard<std::mutex> stats_lock(stats_mutex);
+          doc += stats->randomSentence(140 - doc.length());
+        }
+        
+        twitter::tweet tw;
+        twitter::response resp = client.updateStatus(doc, tw, n.getTweet());
+        if (resp != twitter::response::ok)
+        {
+          std::cout << "Twitter error while tweeting: " << resp << std::endl;
+        }
+      }
+    }
+  });
+  
+  client.startUserStream();
+  std::this_thread::sleep_for(std::chrono::minutes(1));
 
   std::cout << "Generating..." << std::endl;
   for (;;)
   {
-    std::string doc = stats->randomSentence(140);
-    std::string hi = doc;
-    hi.resize(140);
-    
-    std::string replyMsg;
-    if (twitter.statusUpdate(hi))
+    std::string doc;
     {
-      twitter.getLastWebResponse(replyMsg);
-      std::cout << "Twitter message: " << replyMsg << std::endl;
-    } else {
-      twitter.getLastCurlError(replyMsg);
-      std::cout << "Curl error: " << replyMsg << std::endl;
+      std::lock_guard<std::mutex> stats_lock(stats_mutex);
+      doc = stats->randomSentence(140);
+    }
+    doc.resize(140);
+    
+    twitter::tweet tw;
+    twitter::response resp = client.updateStatus(doc, tw);
+    if (resp != twitter::response::ok)
+    {
+      std::cout << "Twitter error while tweeting: " << resp << std::endl;
     }
     
     int waitlen = rand() % delay;
@@ -86,7 +120,7 @@ int main(int argc, char** args)
       std::cout << "Sleeping for " << (waitlen/60/60/24) << " days..." << std::endl;
     }
 
-    sleep(waitlen);
+    std::this_thread::sleep_for(std::chrono::seconds(waitlen));
   }
 	
   return 0;
