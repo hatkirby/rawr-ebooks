@@ -47,26 +47,29 @@ int main(int argc, char** args)
   client.setUserStreamNotifyCallback([&] (twitter::notification n) {
     if (n.getType() == twitter::notification::type::tweet)
     {
-      std::string original = n.getTweet().getText();
-      std::string canonical;
-      std::transform(std::begin(original), std::end(original), std::back_inserter(canonical), [] (char ch) {
-        return std::tolower(ch);
-      });
-      
-      if (canonical.find("@rawr_ebooks") != std::string::npos)
+      if (!n.getTweet().isRetweet())
       {
-        std::string doc = "@" + n.getTweet().getAuthor().getScreenName() + " ";
+        std::string original = n.getTweet().getText();
+        std::string canonical;
+        std::transform(std::begin(original), std::end(original), std::back_inserter(canonical), [] (char ch) {
+          return std::tolower(ch);
+        });
+      
+        if (canonical.find("@rawr_ebooks") != std::string::npos)
         {
-          std::lock_guard<std::mutex> stats_lock(stats_mutex);
-          doc += stats->randomSentence(140 - doc.length());
-          doc.resize(140);
-        }
+          std::string doc = "@" + n.getTweet().getAuthor().getScreenName() + " ";
+          {
+            std::lock_guard<std::mutex> stats_lock(stats_mutex);
+            doc += stats->randomSentence(140 - doc.length());
+            doc.resize(140);
+          }
         
-        twitter::tweet tw;
-        twitter::response resp = client.updateStatus(doc, tw, n.getTweet());
-        if (resp != twitter::response::ok)
-        {
-          std::cout << "Twitter error while tweeting: " << resp << std::endl;
+          twitter::tweet tw;
+          twitter::response resp = client.updateStatus(doc, tw, n.getTweet());
+          if (resp != twitter::response::ok)
+          {
+            std::cout << "Twitter error while tweeting: " << resp << std::endl;
+          }
         }
       }
     }
