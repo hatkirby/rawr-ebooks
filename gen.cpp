@@ -44,18 +44,48 @@ int main(int argc, char** args)
     
     corpus += line + "\n ";
   }
+  
+  // Replace old-style freevars while I can't be bothered to remake the corpus yet
+  std::vector<std::string> fv_names;
+  std::ifstream namefile("names.txt");
+  if (namefile.is_open())
+  {
+    while (!namefile.eof())
+    {
+      std::string l;
+      getline(namefile, l);
+      if (l.back() == '\r')
+      {
+        l.pop_back();
+      }
+      
+      fv_names.push_back(l);
+    }
+  }
+  
+  namefile.close();
 	
   std::cout << "Preprocessing corpus..." << std::endl;
-  kgramstats* stats = new kgramstats(corpus, 4);
+  rawr kgramstats;
+  kgramstats.addCorpus(corpus);
+  kgramstats.compile(4);
+  kgramstats.setTransformCallback([&] (std::string canonical, std::string) {
+    size_t pos = canonical.find("$name$");
+    if (pos != std::string::npos)
+    {
+      canonical.replace(pos, 6, fv_names[rand() % fv_names.size()]);
+    }
+    
+    return canonical;
+  });
     
   std::cout << "Generating..." << std::endl;
   for (;;)
   {
-    std::string doc = stats->randomSentence(140);
-    std::string hi = doc;
-    hi.resize(140);
+    std::string doc = kgramstats.randomSentence(140);
+    doc.resize(140);
 
-    std::cout << hi << std::endl;
+    std::cout << doc << std::endl;
 		
     getc(stdin);
   }

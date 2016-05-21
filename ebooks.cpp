@@ -39,9 +39,41 @@ int main(int argc, char** args)
     
     corpus += line + "\n ";
   }
+  
+  // Replace old-style freevars while I can't be bothered to remake the corpus yet
+  std::vector<std::string> fv_names;
+  std::ifstream namefile("names.txt");
+  if (namefile.is_open())
+  {
+    while (!namefile.eof())
+    {
+      std::string l;
+      getline(namefile, l);
+      if (l.back() == '\r')
+      {
+        l.pop_back();
+      }
+      
+      fv_names.push_back(l);
+    }
+  }
+  
+  namefile.close();
 
   std::cout << "Preprocessing corpus..." << std::endl;
-  kgramstats* stats = new kgramstats(corpus, 4);
+  rawr kgramstats;
+  kgramstats.addCorpus(corpus);
+  kgramstats.compile(4);
+  kgramstats.setTransformCallback([&] (std::string canonical, std::string) {
+    size_t pos = canonical.find("$name$");
+    if (pos != std::string::npos)
+    {
+      canonical.replace(pos, 6, fv_names[rand() % fv_names.size()]);
+    }
+    
+    return canonical;
+  });
+  
   std::mutex stats_mutex;
   
   client.setUserStreamNotifyCallback([&] (twitter::notification n) {
@@ -60,7 +92,7 @@ int main(int argc, char** args)
           std::string doc = "@" + n.getTweet().getAuthor().getScreenName() + " ";
           {
             std::lock_guard<std::mutex> stats_lock(stats_mutex);
-            doc += stats->randomSentence(140 - doc.length());
+            doc += kgramstats.randomSentence(140 - doc.length());
             doc.resize(140);
           }
         
@@ -84,7 +116,7 @@ int main(int argc, char** args)
     std::string doc;
     {
       std::lock_guard<std::mutex> stats_lock(stats_mutex);
-      doc = stats->randomSentence(140);
+      doc = kgramstats.randomSentence(140);
     }
     doc.resize(140);
     

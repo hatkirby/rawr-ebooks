@@ -1,124 +1,135 @@
+#ifndef KGRAMSTATS_H
+#define KGRAMSTATS_H
+
 #include <string>
 #include <map>
 #include <list>
 #include <vector>
 #include "histogram.h"
+#include <functional>
 
-#ifndef KGRAMSTATS_H
-#define KGRAMSTATS_H
-
-struct word {
-  std::string canon;
-  histogram<std::string> forms;
-  histogram<std::string> terms;
-  
-  word(std::string canon) : canon(canon) {}
-  
-  bool operator<(const word& other) const
-  {
-    return canon < other.canon;
-  }
-};
-
-extern word blank_word;
-
-enum class suffixtype {
-  none,
-  terminating,
-  comma
-};
-
-enum class parentype {
-  paren,
-  square_bracket,
-  asterisk,
-  quote
-};
-
-enum class doublestatus {
-  opening,
-  closing,
-  both
-};
-
-struct delimiter {
-  parentype type;
-  doublestatus status;
-  
-  delimiter(parentype type, doublestatus status) : type(type), status(status) {}
-  
-  bool operator<(const delimiter& other) const
-  {
-    return std::tie(type, status) < std::tie(other.type, other.status);
-  }
-};
-
-struct token {
-  const word& w;
-  std::map<delimiter, int> delimiters;
-  suffixtype suffix;
-  std::string raw;
+class rawr {
+  public:
+    typedef std::function<std::string(std::string, std::string)> transform_callback;
     
-  token(const word& w) : w(w), suffix(suffixtype::none) {}
-  
-  bool operator<(const token& other) const
-  {
-    return std::tie(w, delimiters, suffix) < std::tie(other.w, other.delimiters, other.suffix);
-  }
-};
-
-enum class querytype {
-  literal,
-  sentence
-};
-
-struct query {
-  querytype type;
-  token tok;
-  
-  query(token tok) : tok(tok), type(querytype::literal) {}
-  
-  query(querytype type) : tok(blank_word), type(type) {}
-  
-  bool operator<(const query& other) const
-  {
-    if (type == other.type)
-    {
-      return tok < other.tok;
-    } else {
-      return type < other.type;
-    }
-  }
-};
-
-typedef std::list<query> kgram;
-
-class kgramstats
-{
-public:
-	kgramstats(std::string corpus, int maxK);
-	std::string randomSentence(int maxL);
+    void addCorpus(std::string corpus);
+    void compile(int maxK);
+    
+    void setTransformCallback(transform_callback _arg);
+  	std::string randomSentence(int maxL);
 	
-private:
-	struct token_data
-	{
-		int all;
-		int titlecase;
-		int uppercase;
-    token tok;
-    
-    token_data(token tok) : tok(tok), all(0), titlecase(0), uppercase(0) {}
-	};
+  private:
+    struct word {
+      std::string canon;
+      histogram<std::string> forms;
+      histogram<std::string> terms;
   
-	int maxK;
-	std::map<kgram, std::map<int, token_data> > stats;
+      word(std::string canon) : canon(canon) {}
   
-  // Words
-  std::map<std::string, word> words;
-  word hashtags {"#hashtag"};
-  word emoticons {"👌"};
-};
+      bool operator<(const word& other) const
+      {
+        return canon < other.canon;
+      }
+    };
 
-void printKgram(kgram k);
+    enum class suffixtype {
+      none,
+      terminating,
+      comma
+    };
+
+    enum class parentype {
+      paren,
+      square_bracket,
+      asterisk,
+      quote
+    };
+
+    enum class doublestatus {
+      opening,
+      closing,
+      both
+    };
+
+    struct delimiter {
+      parentype type;
+      doublestatus status;
+  
+      delimiter(parentype type, doublestatus status) : type(type), status(status) {}
+  
+      bool operator<(const delimiter& other) const
+      {
+        return std::tie(type, status) < std::tie(other.type, other.status);
+      }
+    };
+
+    struct token {
+      const word& w;
+      std::map<delimiter, int> delimiters;
+      suffixtype suffix;
+      std::string raw;
+    
+      token(const word& w) : w(w), suffix(suffixtype::none) {}
+  
+      bool operator<(const token& other) const
+      {
+        return std::tie(w, delimiters, suffix) < std::tie(other.w, other.delimiters, other.suffix);
+      }
+    };
+
+    enum class querytype {
+      literal,
+      sentence
+    };
+
+    struct query {
+      querytype type;
+      token tok;
+  
+      query(token tok) : tok(tok), type(querytype::literal) {}
+  
+      query(querytype type) : tok(blank_word), type(type) {}
+  
+      bool operator<(const query& other) const
+      {
+        if (type == other.type)
+        {
+          return tok < other.tok;
+        } else {
+          return type < other.type;
+        }
+      }
+    };
+    
+    static const query wildcardQuery;
+    static const word blank_word;
+
+    typedef std::list<query> kgram;
+    
+  	struct token_data
+  	{
+  		int all;
+  		int titlecase;
+  		int uppercase;
+      token tok;
+    
+      token_data(token tok) : tok(tok), all(0), titlecase(0), uppercase(0) {}
+  	};
+    
+    friend std::ostream& operator<<(std::ostream& os, kgram k);
+    friend std::ostream& operator<<(std::ostream& os, query q);
+    friend std::ostream& operator<<(std::ostream& os, token t);
+  
+  	int _maxK;
+    bool _compiled = false; 
+    std::vector<std::string> _corpora;
+  	std::map<kgram, std::map<int, token_data>> _stats;
+    transform_callback _transform;
+  
+    // Words
+    std::map<std::string, word> words;
+    word hashtags {"#hashtag"};
+    word emoticons {"👌"};
+};
 
 #endif
