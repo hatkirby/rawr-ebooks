@@ -4,7 +4,7 @@ project (rawr-ebooks)
 set(CMAKE_BUILD_TYPE Debug)
 
 add_subdirectory(vendor/libtwittercpp)
-include_directories(vendor/libtwittercpp/src vendor/libtwittercpp/vendor/json/src vendor/libtwittercpp/vendor/curlcpp/include)
+include_directories(vendor/libtwittercpp/src)
 
 add_subdirectory(vendor/yaml-cpp EXCLUDE_FROM_ALL)
 include_directories(vendor/yaml-cpp/include)
@@ -20,7 +20,7 @@ target_link_libraries(rawr ${ASPELL_LIBRARIES})
 add_executable(rawr-ebooks ebooks.cpp)
 set_property(TARGET rawr-ebooks PROPERTY CXX_STANDARD 11)
 set_property(TARGET rawr-ebooks PROPERTY CXX_STANDARD_REQUIRED ON)
-target_link_libraries(rawr-ebooks rawr yaml-cpp twitter++ curlcpp curl pthread)
+target_link_libraries(rawr-ebooks rawr yaml-cpp twitter++)
 
 add_executable(rawr-gen gen.cpp)
 set_property(TARGET rawr-gen PROPERTY CXX_STANDARD 11)
