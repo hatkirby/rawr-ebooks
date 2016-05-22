@@ -79,7 +79,7 @@ int main(int argc, char** args)
   client.setUserStreamNotifyCallback([&] (twitter::notification n) {
     if (n.getType() == twitter::notification::type::tweet)
     {
-      if (!n.getTweet().isRetweet())
+      if ((!n.getTweet().isRetweet()) && (n.getTweet().getAuthor() != client.getUser()))
       {
         std::string original = n.getTweet().getText();
         std::string canonical;
@@ -89,7 +89,7 @@ int main(int argc, char** args)
       
         if (canonical.find("@rawr_ebooks") != std::string::npos)
         {
-          std::string doc = "@" + n.getTweet().getAuthor().getScreenName() + " ";
+          std::string doc = client.generateReplyPrefill(n.getTweet());
           {
             std::lock_guard<std::mutex> stats_lock(stats_mutex);
             doc += kgramstats.randomSentence(140 - doc.length());
