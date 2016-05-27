@@ -69,14 +69,14 @@ int main(int argc, char** args)
   rawr kgramstats;
   kgramstats.addCorpus(corpus);
   kgramstats.compile(4);
-  kgramstats.setTransformCallback([&] (std::string canonical, std::string) {
-    size_t pos = canonical.find("$name$");
+  kgramstats.setTransformCallback([&] (std::string, std::string form) {
+    size_t pos = form.find("$name$");
     if (pos != std::string::npos)
     {
-      canonical.replace(pos, 6, fv_names[rand() % fv_names.size()]);
+      form.replace(pos, 6, fv_names[rand() % fv_names.size()]);
     }
     
-    return canonical;
+    return form;
   });
     
   std::cout << "Generating..." << std::endl;
