@@ -10,6 +10,7 @@
 #include <yaml-cpp/yaml.h>
 #include <thread>
 #include <chrono>
+#include <algorithm>
 
 int main(int argc, char** args)
 {
