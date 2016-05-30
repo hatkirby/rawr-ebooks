@@ -19,10 +19,22 @@ class rawr {
   	std::string randomSentence(int maxL);
 	
   private:
+    struct terminator {
+      std::string form;
+      bool newline = false;
+      
+      terminator(std::string form, bool newline) : form(form), newline(newline) {}
+      
+      bool operator<(const terminator& other) const
+      {
+        return std::tie(form, newline) < std::tie(other.form, other.newline);
+      }
+    };
+    
     struct word {
       std::string canon;
       histogram<std::string> forms;
-      histogram<std::string> terms;
+      histogram<terminator> terms;
   
       word(std::string canon) : canon(canon) {}
   
@@ -68,6 +80,7 @@ class rawr {
       std::map<delimiter, int> delimiters;
       suffixtype suffix;
       std::string raw;
+      bool newline = false;
     
       token(const word& w) : w(w), suffix(suffixtype::none) {}
   
@@ -119,6 +132,7 @@ class rawr {
     friend std::ostream& operator<<(std::ostream& os, kgram k);
     friend std::ostream& operator<<(std::ostream& os, query q);
     friend std::ostream& operator<<(std::ostream& os, token t);
+    friend std::ostream& operator<<(std::ostream& os, terminator t);
   
   	int _maxK;
     bool _compiled = false; 

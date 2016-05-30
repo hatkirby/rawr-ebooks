@@ -1,4 +1,5 @@
 #include "histogram.h"
+#include "kgramstats.h"
 #include <cstdlib>
 #include <iostream>
 
@@ -42,3 +43,4 @@ void histogram<T>::print() const
 }
 
 template class histogram <std::string>;
+template class histogram <rawr::terminator>;

@@ -133,14 +133,19 @@ void rawr::compile(int maxK)
         std::cout << per << "%" << std::flush;
       }
     
-      end = _corpora[i].find(" ", start);
+      end = _corpora[i].find_first_of(" \n", start);
 
       bool emoji = false;
-      std::string te = _corpora[i].substr(start, (end == std::string::npos) ? std::string::npos : end - start);
+      std::string te = _corpora[i].substr(start, (end == std::string::npos) ? std::string::npos : end - start + 1);
       std::string t = "";
     
-      if (te.compare("") && te.compare("."))
+      if (te.compare("") && te.compare(".") && te.compare(" "))
       {
+        if (te.back() == ' ')
+        {
+          te.pop_back();
+        }
+        
         // Extract strings of emojis into their own tokens even if they're not space delimited
         int m = emojis.match(te);
         emoji = m > 0;
@@ -166,7 +171,7 @@ void rawr::compile(int maxK)
         std::transform(tc.begin(), tc.end(), tc.begin(), ::tolower);
 
         int pst = tc.find_first_not_of("\"([*");
-        int dst = tc.find_last_not_of("\")]*.,?!\n");
+        int dst = tc.find_last_not_of("\")]*.,?!\n;:");
         std::string canonical("");
         if ((pst != std::string::npos) && (dst != std::string::npos))
         {
@@ -270,28 +275,28 @@ void rawr::compile(int maxK)
           }
         }
       
-        int backtrack = t.find_last_not_of(".,?!])\"*\n") + 1;
+        int backtrack = t.find_last_not_of(".,?!])\"*\n;:") + 1;
         if (backtrack != t.length())
         {
           std::string ending = t.substr(backtrack);
           std::string suffix;
+          bool newline = false;
+          bool terminating = false;
         
           for (char c : ending)
           {
-            if ((c == '.') || (c == ',') || (c == '?') || (c == '!'))
+            if ((c == '.') || (c == ',') || (c == '?') || (c == '!') || (c == ';') || (c == ':'))
             {
               suffix += c;
+              terminating = true;
             
               continue;
             } else if (c == '\n')
             {
-              // At least the end is coming
-              if (suffix.empty())
-              {
-                suffix = ".";
-              }
-            
-              break;
+              newline = true;
+              terminating = true;
+              
+              continue;
             }
           
             parentype pt = ([&] {
@@ -313,13 +318,16 @@ void rawr::compile(int maxK)
             }
           }
         
-          if (suffix == ",")
+          if (terminating)
           {
-            tk.suffix = suffixtype::comma;
-          } else if (!suffix.empty()) {
-            tk.suffix = suffixtype::terminating;
-          
-            w.terms.add(suffix);
+            if ((suffix == ",") && (!newline))
+            {
+              tk.suffix = suffixtype::comma;
+            } else {
+              tk.suffix = suffixtype::terminating;
+              
+              w.terms.add({suffix, newline});
+            }
           }
         }
       
@@ -502,6 +510,18 @@ std::ostream& operator<<(std::ostream& os, rawr::token t)
   }
 }
 
+std::ostream& operator<<(std::ostream& os, rawr::terminator t)
+{
+  os << t.form;
+  
+  if (t.newline)
+  {
+    os << "↵";
+  }
+  
+  return os;
+}
+
 void rawr::setTransformCallback(transform_callback _arg)
 {
   _transform = _arg;
@@ -649,10 +669,20 @@ std::string rawr::randomSentence(int maxL)
     // Terminators
     if (next.tok.suffix == suffixtype::terminating)
     {
-      nextToken.append(next.tok.w.terms.next());
+      auto term = next.tok.w.terms.next();
+      nextToken.append(term.form);
+      
+      if (term.newline)
+      {
+        nextToken.append("\n");
+      } else {
+        nextToken.append(" ");
+      }
     } else if (next.tok.suffix == suffixtype::comma)
     {
-      nextToken.append(",");
+      nextToken.append(", ");
+    } else {
+      nextToken.append(" ");
     }
     
     // If this pick was guaranteed, increase cut chance
@@ -665,9 +695,8 @@ std::string rawr::randomSentence(int maxL)
     std::cout << cur << "-> \"" << nextToken << "\" (" << next.all << "/" << max << ")" << std::endl;
 
     cur.push_back(next.tok);
-		
-    result.append(nextToken + " ");
-    
+    result.append(nextToken);
+        
     if ((next.tok.suffix == suffixtype::terminating) && ((result.length() > maxL) || (rand() % 4 == 0)))
     {
       break;

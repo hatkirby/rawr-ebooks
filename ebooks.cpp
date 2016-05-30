@@ -37,7 +37,7 @@ int main(int argc, char** args)
       line.pop_back();
     }
     
-    corpus += line + "\n ";
+    corpus += line + "\n";
   }
   
   // Replace old-style freevars while I can't be bothered to remake the corpus yet
