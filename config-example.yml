@@ -1,7 +1,7 @@
 ---
  corpus: "corpus.txt"
- username: ""
- password: ""
  consumer_key: ""
  consumer_secret: ""
+ access_key: ""
+ access_secret: ""
  delay: 3600
