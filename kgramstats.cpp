@@ -56,8 +56,7 @@ void rawr::compile(int maxK)
 {
   _maxK = maxK;
   
-  std::vector<token> tokens;
-  size_t start = 0;
+  std::vector<std::vector<token>> tokens;
   std::set<std::string> thashtags;
   std::set<std::string> fv_emoticons;
   
@@ -119,7 +118,9 @@ void rawr::compile(int maxK)
   std::cout.fill(' ');
   for (int i = 0; i < _corpora.size(); i++)
   {
+    size_t start = 0;
     int end = 0;
+    std::vector<token> tkcor;
     
     while (end != std::string::npos)
     {
@@ -331,11 +332,13 @@ void rawr::compile(int maxK)
           }
         }
       
-        tokens.push_back(tk);
+        tkcor.push_back(tk);
       }
 
       start = ((end > (std::string::npos - 1) ) ? std::string::npos : end + 1);
     }
+    
+    tokens.push_back(tkcor);
     
     startper += _corpora[i].length();
   }
@@ -372,65 +375,82 @@ void rawr::compile(int maxK)
   // kgram distribution
   std::cout << "Creating markov chain...   0%" << std::flush;
   std::map<kgram, std::map<token, token_data> > tstats;
-  len = (maxK-1) * tokens.size();
+
+  len = 0;
+  for (auto c : tokens)
+  {
+    len += (maxK-1) * c.size();
+  }
+  
+  startper = 0;
   per = 0;
   perprime = 0;
-  for (int k=1; k<maxK; k++)
+  int corpid = 0;
+  for (auto corpus : tokens)
   {
-    for (int i=0; i<(tokens.size() - k); i++)
+    for (int k=1; k<maxK; k++)
     {
-      perprime = (((k-1)*tokens.size())+i) * 100 / len;
-      if (perprime != per)
+      for (int i=0; i<(corpus.size() - k); i++)
       {
-        per = perprime;
-      
-        std::cout << "\b\b\b\b" << std::right;
-        std::cout.width(3);
-        std::cout << per << "%" << std::flush;
-      }
-      
-      kgram prefix(tokens.begin()+i, tokens.begin()+i+k);
-      token f = tokens[i+k];
-
-      if (tstats[prefix].count(f) == 0)
-      {
-        tstats[prefix].emplace(f, f);
-      }
-			
-      token_data& td = tstats[prefix].at(f);
-      td.all++;
-
-      if (std::find_if(f.raw.begin(), f.raw.end(), ::islower) == f.raw.end())
-      {
-        td.uppercase++;
-      } else if (isupper(f.raw[0]))
-      {
-        td.titlecase++;
-      }
-      
-      if (std::begin(prefix)->tok.suffix == suffixtype::terminating)
-      {
-        kgram term_prefix(prefix);
-        term_prefix.pop_front();
-        term_prefix.push_front(wildcardQuery);
-        
-        if (tstats[term_prefix].count(f) == 0)
+        perprime = (startper+i) * 100 / len;
+        if (perprime != per)
         {
-          tstats[term_prefix].emplace(f, f);
+          per = perprime;
+      
+          std::cout << "\b\b\b\b" << std::right;
+          std::cout.width(3);
+          std::cout << per << "%" << std::flush;
         }
-        
-        token_data& td2 = tstats[term_prefix].at(f);
-        td2.all++;
+      
+        kgram prefix(corpus.begin()+i, corpus.begin()+i+k);
+        token f = corpus[i+k];
+
+        if (tstats[prefix].count(f) == 0)
+        {
+          tstats[prefix].emplace(f, f);
+        }
+			
+        token_data& td = tstats[prefix].at(f);
+        td.all++;
+        td.corpora.insert(corpid);
 
         if (std::find_if(f.raw.begin(), f.raw.end(), ::islower) == f.raw.end())
         {
-          td2.uppercase++;
+          td.uppercase++;
         } else if (isupper(f.raw[0]))
         {
-          td2.titlecase++;
+          td.titlecase++;
+        }
+      
+        if (std::begin(prefix)->tok.suffix == suffixtype::terminating)
+        {
+          kgram term_prefix(prefix);
+          term_prefix.pop_front();
+          term_prefix.push_front(wildcardQuery);
+        
+          if (tstats[term_prefix].count(f) == 0)
+          {
+            tstats[term_prefix].emplace(f, f);
+          }
+        
+          token_data& td2 = tstats[term_prefix].at(f);
+          td2.all++;
+          td2.corpora.insert(corpid);
+
+          if (std::find_if(f.raw.begin(), f.raw.end(), ::islower) == f.raw.end())
+          {
+            td2.uppercase++;
+          } else if (isupper(f.raw[0]))
+          {
+            td2.titlecase++;
+          }
         }
       }
+      
+      startper += corpus.size();
     }
+    
+    corpid++;
   }
   
   std::cout << "\b\b\b\b100%" << std::endl;
@@ -527,6 +547,11 @@ void rawr::setTransformCallback(transform_callback _arg)
   _transform = _arg;
 }
 
+void rawr::setMinCorpora(int _arg)
+{
+  _min_corpora = _arg;
+}
+
 // runs in O(n log t) time where n is the input number of sentences and t is the number of tokens in the input corpus
 std::string rawr::randomSentence(int maxL)
 {
@@ -539,6 +564,7 @@ std::string rawr::randomSentence(int maxL)
   kgram cur(1, wildcardQuery);
   int cuts = 0;
   std::stack<parentype> open_delimiters;
+  std::set<int> used_corpora;
 	
   for (;;)
   {
@@ -690,9 +716,19 @@ std::string rawr::randomSentence(int maxL)
     {
       cuts++;
     }
+    
+    if (next.corpora.size() == 1)
+    {
+      used_corpora.insert(*next.corpora.begin());
+    }
 		
     /* DEBUG */
-    std::cout << cur << "-> \"" << nextToken << "\" (" << next.all << "/" << max << ")" << std::endl;
+    std::cout << cur << "-> \"" << nextToken << "\" (" << next.all << "/" << max << ")" << " in corp";
+    for (auto cor : next.corpora)
+    {
+      std::cout << " " << cor;
+    }
+    std::cout << std::endl;
 
     cur.push_back(next.tok);
     result.append(nextToken);
@@ -701,6 +737,12 @@ std::string rawr::randomSentence(int maxL)
     {
       break;
     }
+  }
+  
+  // Ensure that enough corpora are used
+  if (used_corpora.size() < _min_corpora)
+  {
+    return randomSentence(maxL);
   }
   
   // Remove the trailing space
@@ -722,8 +764,6 @@ std::string rawr::randomSentence(int maxL)
     
     open_delimiters.pop();
   }
-  
-  result.resize(maxL);
 	
   return result;
 }

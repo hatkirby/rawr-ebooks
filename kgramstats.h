@@ -7,6 +7,7 @@
 #include <vector>
 #include "histogram.h"
 #include <functional>
+#include <set>
 
 class rawr {
   public:
@@ -16,6 +17,7 @@ class rawr {
     void compile(int maxK);
     
     void setTransformCallback(transform_callback _arg);
+    void setMinCorpora(int _arg);
   	std::string randomSentence(int maxL);
 	
   private:
@@ -125,6 +127,7 @@ class rawr {
   		int titlecase;
   		int uppercase;
       token tok;
+      std::set<int> corpora;
     
       token_data(token tok) : tok(tok), all(0), titlecase(0), uppercase(0) {}
   	};
@@ -139,6 +142,7 @@ class rawr {
     std::vector<std::string> _corpora;
   	std::map<kgram, std::map<int, token_data>> _stats;
     transform_callback _transform;
+    int _min_corpora = 1;
   
     // Words
     std::map<std::string, word> words;
