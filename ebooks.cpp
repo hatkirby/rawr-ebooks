@@ -77,10 +77,18 @@ int main(int argc, char** args)
   
   std::mutex stats_mutex;
   
+  twitter::user me;
+  auto resp = client.getUser(me);
+  if (resp != twitter::response::ok)
+  {
+    std::cout << "Could not get current Twitter user" << std::endl;
+    return -1;
+  }
+  
   client.setUserStreamNotifyCallback([&] (twitter::notification n) {
     if (n.getType() == twitter::notification::type::tweet)
     {
-      if ((!n.getTweet().isRetweet()) && (n.getTweet().getAuthor() != client.getUser()))
+      if ((!n.getTweet().isRetweet()) && (n.getTweet().getAuthor() != me))
       {
         std::string original = n.getTweet().getText();
         std::string canonical;
@@ -122,7 +130,7 @@ int main(int argc, char** args)
     doc.resize(140);
     
     twitter::tweet tw;
-    twitter::response resp = client.updateStatus(doc, tw);
+    resp = client.updateStatus(doc, tw);
     if (resp != twitter::response::ok)
     {
       std::cout << "Twitter error while tweeting: " << resp << std::endl;
