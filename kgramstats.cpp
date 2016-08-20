@@ -553,7 +553,7 @@ void rawr::setMinCorpora(int _arg)
 }
 
 // runs in O(n log t) time where n is the input number of sentences and t is the number of tokens in the input corpus
-std::string rawr::randomSentence(int maxL)
+std::string rawr::randomSentence(int maxL) const
 {
   if (!_compiled)
   {
@@ -597,10 +597,10 @@ std::string rawr::randomSentence(int maxL)
       cur = kgram(1, wildcardQuery);
     }
 
-    auto& distribution = _stats[cur];
+    auto& distribution = _stats.at(cur);
     int max = distribution.rbegin()->first;
     int r = rand() % max;
-    token_data& next = distribution.upper_bound(r)->second;
+    const token_data& next = distribution.upper_bound(r)->second;
     std::string nextToken = next.tok.w.forms.next();
     
     // Apply user-specified transforms

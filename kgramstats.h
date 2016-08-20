@@ -18,7 +18,7 @@ class rawr {
     
     void setTransformCallback(transform_callback _arg);
     void setMinCorpora(int _arg);
-  	std::string randomSentence(int maxL);
+  	std::string randomSentence(int maxL) const;
 	
   private:
     struct terminator {
