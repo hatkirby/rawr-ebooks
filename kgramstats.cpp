@@ -746,7 +746,7 @@ std::string rawr::randomSentence(int maxL) const
   }
   
   // Remove the trailing space
-  if (result.back() == ' ')
+  if (result.back() == ' ' || result.back() == '\n')
   {
     result.pop_back();
   }
