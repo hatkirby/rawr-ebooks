@@ -78,7 +78,7 @@ int main(int argc, char** args)
   twitter::stream user_stream(client, [&kgramstats] (const twitter::notification& n) {
     if (n.getType() == twitter::notification::type::tweet)
     {
-      if ((!n.getTweet().isRetweet()) && (n.getTweet().isMyTweet()))
+      if ((!n.getTweet().isRetweet()) && (!n.getTweet().isMyTweet()))
       {
         std::string original = n.getTweet().getText();
         std::string canonical;
