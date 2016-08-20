@@ -75,20 +75,10 @@ int main(int argc, char** args)
     return form;
   });
   
-  std::mutex stats_mutex;
-  
-  twitter::user me;
-  auto resp = client.getUser(me);
-  if (resp != twitter::response::ok)
-  {
-    std::cout << "Could not get current Twitter user" << std::endl;
-    return -1;
-  }
-  
-  client.setUserStreamNotifyCallback([&] (twitter::notification n) {
+  twitter::stream user_stream(client, [&kgramstats] (const twitter::notification& n) {
     if (n.getType() == twitter::notification::type::tweet)
     {
-      if ((!n.getTweet().isRetweet()) && (n.getTweet().getAuthor() != me))
+      if ((!n.getTweet().isRetweet()) && (n.getTweet().isMyTweet()))
       {
         std::string original = n.getTweet().getText();
         std::string canonical;
@@ -98,42 +88,36 @@ int main(int argc, char** args)
       
         if (canonical.find("@rawr_ebooks") != std::string::npos)
         {
-          std::string doc = client.generateReplyPrefill(n.getTweet());
+          std::string doc = n.getTweet().generateReplyPrefill();
+          doc += kgramstats.randomSentence(140 - doc.length());
+          doc.resize(140);
+
+          try
           {
-            std::lock_guard<std::mutex> stats_lock(stats_mutex);
-            doc += kgramstats.randomSentence(140 - doc.length());
-            doc.resize(140);
-          }
-        
-          twitter::tweet tw;
-          twitter::response resp = client.updateStatus(doc, tw, n.getTweet());
-          if (resp != twitter::response::ok)
+            n.getTweet().reply(doc);
+          } catch (const twitter::twitter_error& error)
           {
-            std::cout << "Twitter error while tweeting: " << resp << std::endl;
+            std::cout << "Twitter error while tweeting: " << error.what() << std::endl;
           }
         }
       }
     }
   });
   
-  client.startUserStream();
   std::this_thread::sleep_for(std::chrono::minutes(1));
 
   std::cout << "Generating..." << std::endl;
   for (;;)
   {
-    std::string doc;
-    {
-      std::lock_guard<std::mutex> stats_lock(stats_mutex);
-      doc = kgramstats.randomSentence(140);
-    }
+    std::string doc = kgramstats.randomSentence(140);
     doc.resize(140);
     
-    twitter::tweet tw;
-    resp = client.updateStatus(doc, tw);
-    if (resp != twitter::response::ok)
+    try
     {
-      std::cout << "Twitter error while tweeting: " << resp << std::endl;
+      client.updateStatus(doc);
+    } catch (const twitter::twitter_error& error)
+    {
+      std::cout << "Twitter error while tweeting: " << error.what() << std::endl;
     }
     
     int waitlen = rand() % delay;
