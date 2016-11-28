@@ -327,7 +327,12 @@ void rawr::compile(int maxK)
             } else {
               tk.suffix = suffixtype::terminating;
               
-              w.terms.add({suffix, newline});
+              if (!newline)
+              {
+                w.terms.add({suffix, false});
+              } else {
+                w.terms.add({".", false});
+              }
             }
           }
         }
@@ -573,21 +578,10 @@ std::string rawr::randomSentence(int maxL) const
       cur.pop_front();
     }
     
-    if (cur.size() > 0)
+    if ((cur.size() > 2) && (cuts > 0) && ((rand() % cuts) > 0))
     {
-      if (rand() % (_maxK - cur.size() + 1) == 0)
-      {
-        while ((cur.size() > 2) && (cuts > 0))
-        {
-          if ((rand() % cuts) > 2)
-          {
-            cur.pop_front();
-            cuts--;
-          } else {
-            break;
-          }
-        }
-      }
+      cur.pop_front();
+      cuts /= 2;
     }
     
     // Gotta circumvent the last line of the input corpus
@@ -711,10 +705,13 @@ std::string rawr::randomSentence(int maxL) const
       nextToken.append(" ");
     }
     
-    // If this pick was guaranteed, increase cut chance
     if (next.all == max)
     {
+      // If this pick was guaranteed, increase cut chance
       cuts++;
+    } else if (cuts > 0) {
+      // Otherwise, decrease cut chance
+      cuts--;
     }
     
     if (next.corpora.size() == 1)
@@ -728,7 +725,7 @@ std::string rawr::randomSentence(int maxL) const
     {
       std::cout << " " << cor;
     }
-    std::cout << std::endl;
+    std::cout << "; l=" << cur.size() << ",cuts=" << cuts << std::endl;
 
     cur.push_back(next.tok);
     result.append(nextToken);
