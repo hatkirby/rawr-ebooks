@@ -75,10 +75,10 @@ int main(int argc, char** args)
     return form;
   });
   
-  twitter::stream user_stream(client, [&kgramstats] (const twitter::notification& n) {
+  twitter::stream user_stream(client, [&kgramstats, &client] (const twitter::notification& n) {
     if (n.getType() == twitter::notification::type::tweet)
     {
-      if ((!n.getTweet().isRetweet()) && (!n.getTweet().isMyTweet()))
+      if ((!n.getTweet().isRetweet()) && (n.getTweet().getAuthor() != client.getUser()))
       {
         std::string original = n.getTweet().getText();
         std::string canonical;
@@ -88,13 +88,13 @@ int main(int argc, char** args)
       
         if (canonical.find("@rawr_ebooks") != std::string::npos)
         {
-          std::string doc = n.getTweet().generateReplyPrefill();
+          std::string doc = n.getTweet().generateReplyPrefill(client.getUser());
           doc += kgramstats.randomSentence(140 - doc.length());
           doc.resize(140);
 
           try
           {
-            n.getTweet().reply(doc);
+            client.replyToTweet(doc, n.getTweet());
           } catch (const twitter::twitter_error& error)
           {
             std::cout << "Twitter error while tweeting: " << error.what() << std::endl;
