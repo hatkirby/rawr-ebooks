@@ -578,11 +578,16 @@ std::string rawr::randomSentence(int maxL) const
       cur.pop_front();
     }
     
-    if ((cur.size() > 2) && (cuts > 0) && ((rand() % cuts) > 0))
+    do
     {
-      cur.pop_front();
-      cuts /= 2;
-    }
+      if ((cur.size() > 2) && (cuts > 0) && ((rand() % cuts) > 0))
+      {
+        cur.pop_front();
+        cuts--;
+      } else {
+        break;
+      }
+    } while ((cur.size() > 2) && (cuts > 0) && ((rand() % cuts) > 0));
     
     // Gotta circumvent the last line of the input corpus
     // https://twitter.com/starla4444/status/684222271339237376
@@ -711,7 +716,7 @@ std::string rawr::randomSentence(int maxL) const
       cuts++;
     } else if (cuts > 0) {
       // Otherwise, decrease cut chance
-      cuts--;
+      cuts /= 2;
     }
     
     if (next.corpora.size() == 1)
