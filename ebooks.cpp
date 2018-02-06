@@ -64,7 +64,7 @@ int main(int argc, char** args)
   std::cout << "Preprocessing corpus..." << std::endl;
   rawr kgramstats;
   kgramstats.addCorpus(corpus);
-  kgramstats.compile(4);
+  kgramstats.compile(5);
   kgramstats.setTransformCallback([&] (std::string, std::string form) {
     size_t pos = form.find("$name$");
     if (pos != std::string::npos)
