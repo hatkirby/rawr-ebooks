@@ -55,8 +55,8 @@ void rawr::addCorpus(std::string corpus)
 void rawr::compile(int maxK)
 {
   _maxK = maxK;
-  
-  std::vector<std::vector<token>> tokens;
+
+  std::vector<std::vector<token_id>> tokens;
   std::set<std::string> thashtags;
   std::set<std::string> fv_emoticons;
   
@@ -120,8 +120,8 @@ void rawr::compile(int maxK)
   {
     size_t start = 0;
     int end = 0;
-    std::vector<token> tkcor;
-    
+    std::vector<token_id> tkcor;
+
     while (end != std::string::npos)
     {
       perprime = (startper + end) * 100 / len;
@@ -336,8 +336,8 @@ void rawr::compile(int maxK)
             }
           }
         }
-      
-        tkcor.push_back(tk);
+
+        tkcor.push_back(_tokenstore.add(tk));
       }
 
       start = ((end > (std::string::npos - 1) ) ? std::string::npos : end + 1);
@@ -377,9 +377,12 @@ void rawr::compile(int maxK)
   emoticons.forms.compile();
   emoticons.terms.compile();
 
+  // Compile the interned tokens.
+  _tokenstore.compile();
+
   // kgram distribution
   std::cout << "Creating markov chain...   0%" << std::flush;
-  std::map<kgram, std::map<token, token_data> > tstats;
+  std::map<kgram, std::map<token_id, token_data> > tstats;
 
   len = 0;
   for (auto c : tokens)
@@ -408,14 +411,15 @@ void rawr::compile(int maxK)
         }
       
         kgram prefix(corpus.begin()+i, corpus.begin()+i+k);
-        token f = corpus[i+k];
+        token_id fid = corpus[i+k];
+        const token& f = _tokenstore.get(fid);
 
-        if (tstats[prefix].count(f) == 0)
+        if (tstats[prefix].count(fid) == 0)
         {
-          tstats[prefix].emplace(f, f);
+          tstats[prefix].emplace(fid, fid);
         }
-			
-        token_data& td = tstats[prefix].at(f);
+
+        token_data& td = tstats[prefix].at(fid);
         td.all++;
         td.corpora.insert(corpid);
 
@@ -426,19 +430,20 @@ void rawr::compile(int maxK)
         {
           td.titlecase++;
         }
-      
-        if (std::begin(prefix)->tok.suffix == suffixtype::terminating)
+
+        const token& startTok = _tokenstore.get(std::begin(prefix)->tok);
+        if (startTok.suffix == suffixtype::terminating)
         {
           kgram term_prefix(prefix);
           term_prefix.pop_front();
           term_prefix.push_front(wildcardQuery);
-        
-          if (tstats[term_prefix].count(f) == 0)
+
+          if (tstats[term_prefix].count(fid) == 0)
           {
-            tstats[term_prefix].emplace(f, f);
+            tstats[term_prefix].emplace(fid, fid);
           }
-        
-          token_data& td2 = tstats[term_prefix].at(f);
+
+          token_data& td2 = tstats[term_prefix].at(fid);
           td2.all++;
           td2.corpora.insert(corpid);
 
@@ -600,12 +605,13 @@ std::string rawr::randomSentence(int maxL) const
     int max = distribution.rbegin()->first;
     int r = rand() % max;
     const token_data& next = distribution.upper_bound(r)->second;
-    std::string nextToken = next.tok.w.forms.next();
-    
+    const token& interned = _tokenstore.get(next.tok);
+    std::string nextToken = interned.w.forms.next();
+
     // Apply user-specified transforms
     if (_transform)
     {
-      nextToken = _transform(next.tok.w.canon, nextToken);
+      nextToken = _transform(interned.w.canon, nextToken);
     }
   
     // Determine the casing of the next token. We randomly make the token all
@@ -615,17 +621,36 @@ std::string rawr::randomSentence(int maxL) const
     if (casing < next.uppercase)
     {
       std::transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
-    } else if ((((cur.rbegin()->type == querytype::sentence)
-          || ((cur.rbegin()->type == querytype::literal)
-            && (cur.rbegin()->tok.suffix == suffixtype::terminating)))
-        && (rand() % 2 > 0))
-      || (casing - next.uppercase < next.titlecase))
-    {
-      nextToken[0] = toupper(nextToken[0]);
+    } else {
+      bool capitalize = false;
+
+      if (casing - next.uppercase < next.titlecase)
+      {
+        capitalize = true;
+      } else if (cur.rbegin()->type == querytype::sentence)
+      {
+        if (rand() % 2 > 0)
+        {
+          capitalize = true;
+        }
+      } else {
+        const token& lastTok = _tokenstore.get(cur.rbegin()->tok);
+
+        if (lastTok.suffix == suffixtype::terminating &&
+            rand() % 2 > 0)
+        {
+          capitalize = true;
+        }
+      }
+
+      if (capitalize)
+      {
+        nextToken[0] = toupper(nextToken[0]);
+      }
     }
     
     // Delimiters
-    for (auto& dt : next.tok.delimiters)
+    for (auto& dt : interned.delimiters)
     {
       if (dt.first.status == doublestatus::both)
       {
@@ -692,9 +717,9 @@ std::string rawr::randomSentence(int maxL) const
     }
     
     // Terminators
-    if (next.tok.suffix == suffixtype::terminating)
+    if (interned.suffix == suffixtype::terminating)
     {
-      auto term = next.tok.w.terms.next();
+      auto term = interned.w.terms.next();
       nextToken.append(term.form);
       
       if (term.newline)
@@ -703,7 +728,7 @@ std::string rawr::randomSentence(int maxL) const
       } else {
         nextToken.append(" ");
       }
-    } else if (next.tok.suffix == suffixtype::comma)
+    } else if (interned.suffix == suffixtype::comma)
     {
       nextToken.append(", ");
     } else {
@@ -734,8 +759,8 @@ std::string rawr::randomSentence(int maxL) const
 
     cur.push_back(next.tok);
     result.append(nextToken);
-        
-    if ((next.tok.suffix == suffixtype::terminating) && ((result.length() > maxL) || (rand() % 4 == 0)))
+
+    if ((interned.suffix == suffixtype::terminating) && ((result.length() > maxL) || (rand() % 4 == 0)))
     {
       break;
     }

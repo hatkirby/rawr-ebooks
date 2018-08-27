@@ -6,6 +6,7 @@
 #include <list>
 #include <vector>
 #include "histogram.h"
+#include "identifier.h"
 #include <functional>
 #include <set>
 
@@ -92,6 +93,9 @@ class rawr {
       }
     };
 
+    using tokenstore = identifier<token>;
+    using token_id = tokenstore::key_type;
+
     enum class querytype {
       literal,
       sentence
@@ -99,12 +103,12 @@ class rawr {
 
     struct query {
       querytype type;
-      token tok;
-  
-      query(token tok) : tok(tok), type(querytype::literal) {}
-  
-      query(querytype type) : tok(blank_word), type(type) {}
-  
+      token_id tok;
+
+      query(token_id tok) : tok(tok), type(querytype::literal) {}
+
+      query(querytype type) : tok(0), type(type) {}
+
       bool operator<(const query& other) const
       {
         if (type == other.type)
@@ -126,10 +130,10 @@ class rawr {
   		int all;
   		int titlecase;
   		int uppercase;
-      token tok;
+      token_id tok;
       std::set<int> corpora;
-    
-      token_data(token tok) : tok(tok), all(0), titlecase(0), uppercase(0) {}
+
+      token_data(token_id tok) : tok(tok), all(0), titlecase(0), uppercase(0) {}
   	};
     
     friend std::ostream& operator<<(std::ostream& os, kgram k);
@@ -140,6 +144,7 @@ class rawr {
   	int _maxK;
     bool _compiled = false; 
     std::vector<std::string> _corpora;
+    tokenstore _tokenstore;
   	std::map<kgram, std::map<int, token_data>> _stats;
     transform_callback _transform;
     int _min_corpora = 1;
