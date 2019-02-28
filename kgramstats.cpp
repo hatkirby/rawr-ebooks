@@ -396,6 +396,33 @@ void rawr::compile(int maxK)
   int corpid = 0;
   for (auto corpus : tokens)
   {
+    for (int k=0; k<maxK && k<corpus.size(); k++)
+    {
+      // The zero'th token should be a terminator.
+      token_id fid = corpus[k];
+      const token& f = _tokenstore.get(fid);
+
+      kgram term_prefix(corpus.begin(), corpus.begin()+k);
+      term_prefix.push_front(wildcardQuery);
+
+      if (tstats[term_prefix].count(fid) == 0)
+      {
+        tstats[term_prefix].emplace(fid, fid);
+      }
+
+      token_data& td2 = tstats[term_prefix].at(fid);
+      td2.all++;
+      td2.corpora.insert(corpid);
+
+      if (std::find_if(f.raw.begin(), f.raw.end(), ::islower) == f.raw.end())
+      {
+        td2.uppercase++;
+      } else if (isupper(f.raw[0]))
+      {
+        td2.titlecase++;
+      }
+    }
+
     for (int k=1; k<maxK && k<corpus.size(); k++)
     {
       for (int i=0; i<(corpus.size() - k); i++)
