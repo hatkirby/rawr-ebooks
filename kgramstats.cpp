@@ -396,7 +396,7 @@ void rawr::compile(int maxK)
   int corpid = 0;
   for (auto corpus : tokens)
   {
-    for (int k=1; k<maxK; k++)
+    for (int k=1; k<maxK && k<corpus.size(); k++)
     {
       for (int i=0; i<(corpus.size() - k); i++)
       {
