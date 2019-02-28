@@ -625,6 +625,13 @@ std::string rawr::randomSentence(int maxL) const
     // https://twitter.com/starla4444/status/684222271339237376
     if (_stats.count(cur) == 0)
     {
+      // The end of a corpus should probably be treated like a terminator, so
+      // maybe we should just end here.
+      if ((result.length() > maxL) || (rand() % 4 == 0))
+      {
+        break;
+      }
+
       cur = kgram(1, wildcardQuery);
     }
 
