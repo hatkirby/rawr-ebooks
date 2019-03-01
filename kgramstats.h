@@ -9,6 +9,7 @@
 #include "identifier.h"
 #include <functional>
 #include <set>
+#include <random>
 
 class rawr {
   public:
@@ -19,7 +20,7 @@ class rawr {
     
     void setTransformCallback(transform_callback _arg);
     void setMinCorpora(int _arg);
-  	std::string randomSentence(int maxL) const;
+  	std::string randomSentence(int maxL, std::mt19937& rng) const;
 	
   private:
     struct terminator {

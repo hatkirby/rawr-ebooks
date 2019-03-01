@@ -2,8 +2,6 @@
 #include <list>
 #include <map>
 #include "kgramstats.h"
-#include <ctime>
-#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <twitter.h>
@@ -11,14 +9,15 @@
 #include <thread>
 #include <chrono>
 #include <algorithm>
+#include <random>
 
 const auto QUEUE_TIMEOUT = std::chrono::minutes(1);
 const auto POLL_TIMEOUT = std::chrono::minutes(5);
 
 int main(int argc, char** args)
 {
-  srand(time(NULL));
-  rand(); rand(); rand(); rand();
+  std::random_device randomDevice;
+  std::mt19937 rng(randomDevice());
 
   YAML::Node config = YAML::LoadFile("config.yml");
   int delay = config["delay"].as<int>();
@@ -72,7 +71,8 @@ int main(int argc, char** args)
     size_t pos = form.find("$name$");
     if (pos != std::string::npos)
     {
-      form.replace(pos, 6, fv_names[rand() % fv_names.size()]);
+      int fvInd = std::uniform_int_distribution<int>(0, fv_names.size()-1)(rng);
+      form.replace(pos, 6, fv_names[fvInd]);
     }
 
     return form;
@@ -92,12 +92,12 @@ int main(int argc, char** args)
 
     if (currentTime >= genTimer)
     {
-      std::string doc = kgramstats.randomSentence(140);
+      std::string doc = kgramstats.randomSentence(140, rng);
       doc.resize(140);
 
       postQueue.emplace_back(std::move(doc), false, 0);
 
-      int genwait = rand() % delay + 1;
+      int genwait = std::uniform_int_distribution<int>(1, delay)(rng);
 
       genTimer = currentTime + std::chrono::seconds(genwait);
     }
@@ -125,7 +125,7 @@ int main(int argc, char** args)
             && tweet.getAuthor() != client.getUser())
           {
             std::string doc = tweet.generateReplyPrefill(client.getUser());
-            doc += kgramstats.randomSentence(140 - doc.length());
+            doc += kgramstats.randomSentence(140 - doc.length(), rng);
             doc.resize(140);
 
             postQueue.emplace_back(std::move(doc), true, tweet.getID());

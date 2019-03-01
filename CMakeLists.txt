@@ -15,7 +15,7 @@ include_directories(
   ${ASPELL_INCLUDE_DIR}
   ${yaml-cpp_INCLUDE_DIRS})
 
-add_library(rawr kgramstats.cpp histogram.cpp prefix_search.cpp)
+add_library(rawr kgramstats.cpp prefix_search.cpp)
 set_property(TARGET rawr PROPERTY CXX_STANDARD 11)
 set_property(TARGET rawr PROPERTY CXX_STANDARD_REQUIRED ON)
 target_link_libraries(rawr ${ASPELL_LIBRARIES})

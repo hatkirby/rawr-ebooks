@@ -2,15 +2,15 @@
 #include <list>
 #include <map>
 #include "kgramstats.h"
-#include <ctime>
 #include <vector>
-#include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <random>
 
 int main(int argc, char** args)
 {
-  srand(time(NULL));
+  std::random_device randomDevice;
+  std::mt19937 rng(randomDevice());
     
   if (argc == 1)
   {
@@ -73,7 +73,8 @@ int main(int argc, char** args)
     size_t pos = form.find("$name$");
     if (pos != std::string::npos)
     {
-      form.replace(pos, 6, fv_names[rand() % fv_names.size()]);
+      int fvInd = std::uniform_int_distribution<int>(0, fv_names.size()-1)(rng);
+      form.replace(pos, 6, fv_names[fvInd]);
     }
     
     return form;
@@ -82,7 +83,7 @@ int main(int argc, char** args)
   std::cout << "Generating..." << std::endl;
   for (;;)
   {
-    std::string doc = kgramstats.randomSentence(140);
+    std::string doc = kgramstats.randomSentence(140, rng);
     doc.resize(140);
 
     std::cout << doc << std::endl;

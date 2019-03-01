@@ -590,7 +590,7 @@ void rawr::setMinCorpora(int _arg)
 }
 
 // runs in O(n log t) time where n is the input number of sentences and t is the number of tokens in the input corpus
-std::string rawr::randomSentence(int maxL) const
+std::string rawr::randomSentence(int maxL, std::mt19937& rng) const
 {
   if (!_compiled)
   {
@@ -610,16 +610,13 @@ std::string rawr::randomSentence(int maxL) const
       cur.pop_front();
     }
     
-    do
+    while (cur.size() > 2 &&
+           cuts > 0 &&
+           !std::bernoulli_distribution(1.0 / static_cast<double>(cuts))(rng))
     {
-      if ((cur.size() > 2) && (cuts > 0) && ((rand() % cuts) > 0))
-      {
         cur.pop_front();
         cuts--;
-      } else {
-        break;
-      }
-    } while ((cur.size() > 2) && (cuts > 0) && ((rand() % cuts) > 0));
+    }
     
     // Gotta circumvent the last line of the input corpus
     // https://twitter.com/starla4444/status/684222271339237376
@@ -627,7 +624,8 @@ std::string rawr::randomSentence(int maxL) const
     {
       // The end of a corpus should probably be treated like a terminator, so
       // maybe we should just end here.
-      if ((result.length() > maxL) || (rand() % 4 == 0))
+      if (result.length() > maxL ||
+          std::bernoulli_distribution(1.0 / 4.0)(rng))
       {
         break;
       }
@@ -637,10 +635,11 @@ std::string rawr::randomSentence(int maxL) const
 
     auto& distribution = _stats.at(cur);
     int max = distribution.rbegin()->first;
-    int r = rand() % max;
+    std::uniform_int_distribution<int> randDist(0, max - 1);
+    int r = randDist(rng);
     const token_data& next = distribution.upper_bound(r)->second;
     const token& interned = _tokenstore.get(next.tok);
-    std::string nextToken = interned.w.forms.next();
+    std::string nextToken = interned.w.forms.next(rng);
 
     // Apply user-specified transforms
     if (_transform)
@@ -651,10 +650,16 @@ std::string rawr::randomSentence(int maxL) const
     // Determine the casing of the next token. We randomly make the token all
     // caps based on the markov chain. Otherwise, we check if the previous
     // token is the end of a sentence (terminating token or a wildcard query).
-    int casing = rand() % next.all;
+    std::uniform_int_distribution<int> caseDist(0, next.all - 1);
+    int casing = caseDist(rng);
+    
     if (casing < next.uppercase)
     {
-      std::transform(nextToken.begin(), nextToken.end(), nextToken.begin(), ::toupper);
+      std::transform(
+        std::begin(nextToken),
+        std::end(nextToken),
+        std::begin(nextToken),
+        ::toupper);
     } else {
       bool capitalize = false;
 
@@ -663,7 +668,7 @@ std::string rawr::randomSentence(int maxL) const
         capitalize = true;
       } else if (cur.rbegin()->type == querytype::sentence)
       {
-        if (rand() % 2 > 0)
+        if (std::bernoulli_distribution(1.0 / 2.0)(rng))
         {
           capitalize = true;
         }
@@ -671,7 +676,7 @@ std::string rawr::randomSentence(int maxL) const
         const token& lastTok = _tokenstore.get(cur.rbegin()->tok);
 
         if (lastTok.suffix == suffixtype::terminating &&
-            rand() % 2 > 0)
+            std::bernoulli_distribution(1.0 / 2.0)(rng))
         {
           capitalize = true;
         }
@@ -753,7 +758,7 @@ std::string rawr::randomSentence(int maxL) const
     // Terminators
     if (interned.suffix == suffixtype::terminating)
     {
-      auto term = interned.w.terms.next();
+      auto term = interned.w.terms.next(rng);
       nextToken.append(term.form);
       
       if (term.newline)
@@ -794,7 +799,9 @@ std::string rawr::randomSentence(int maxL) const
     cur.push_back(next.tok);
     result.append(nextToken);
 
-    if ((interned.suffix == suffixtype::terminating) && ((result.length() > maxL) || (rand() % 4 == 0)))
+    if (interned.suffix == suffixtype::terminating &&
+          (result.length() > maxL ||
+           std::bernoulli_distribution(1.0 / 4.0)(rng)))
     {
       break;
     }
@@ -803,7 +810,7 @@ std::string rawr::randomSentence(int maxL) const
   // Ensure that enough corpora are used
   if (used_corpora.size() < _min_corpora)
   {
-    return randomSentence(maxL);
+    return randomSentence(maxL, rng);
   }
   
   // Remove the trailing space
