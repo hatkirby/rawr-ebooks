@@ -1,8 +1,6 @@
 cmake_minimum_required (VERSION 3.1)
 project (rawr-ebooks)
 
-set(CMAKE_BUILD_TYPE Debug)
-
 add_subdirectory(vendor/libtwittercpp)
 
 find_package(ASPELL REQUIRED)
