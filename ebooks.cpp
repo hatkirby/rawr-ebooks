@@ -4,12 +4,13 @@
 #include "kgramstats.h"
 #include <fstream>
 #include <iostream>
-#include <twitter.h>
+#include <mastodonpp/mastodonpp.hpp>
 #include <yaml-cpp/yaml.h>
 #include <thread>
 #include <chrono>
 #include <algorithm>
 #include <random>
+#include "timeline.h"
 
 const auto QUEUE_TIMEOUT = std::chrono::minutes(1);
 const auto POLL_TIMEOUT = std::chrono::minutes(5);
@@ -22,13 +23,13 @@ int main(int argc, char** args)
   YAML::Node config = YAML::LoadFile("config.yml");
   int delay = config["delay"].as<int>();
 
-  twitter::auth auth(
-    config["consumer_key"].as<std::string>(),
-    config["consumer_secret"].as<std::string>(),
-    config["access_key"].as<std::string>(),
-    config["access_secret"].as<std::string>());
+  mastodonpp::Instance instance{
+    config["mastodon_instance"].as<std::string>(),
+    config["mastodon_token"].as<std::string>()};
+  mastodonpp::Connection connection{instance};
 
-  twitter::client client(auth);
+  timeline mentions(mastodonpp::API::v1::notifications);
+  mentions.poll(connection); // just ignore the results
 
   std::ifstream infile(config["corpus"].as<std::string>().c_str());
   std::string corpus;
@@ -78,7 +79,7 @@ int main(int argc, char** args)
     return form;
   });
 
-  std::list<std::tuple<std::string, bool, twitter::tweet_id>> postQueue;
+  std::list<std::tuple<std::string, bool, std::string>> postQueue;
 
   auto startedTime = std::chrono::system_clock::now();
 
@@ -93,13 +94,11 @@ int main(int argc, char** args)
     if (currentTime >= genTimer)
     {
       std::string doc = kgramstats.randomSentence(140, rng);
-      doc.resize(140);
+      doc.resize(500);
 
-      postQueue.emplace_back(std::move(doc), false, 0);
+      postQueue.emplace_back(std::move(doc), false, "");
 
-      int genwait = std::uniform_int_distribution<int>(1, delay)(rng);
-
-      genTimer = currentTime + std::chrono::seconds(genwait);
+      genTimer = currentTime + std::chrono::seconds(delay);
     }
 
     if (currentTime >= pollTimer)
@@ -108,36 +107,27 @@ int main(int argc, char** args)
 
       try
       {
-        std::list<twitter::tweet> newTweets =
-          client.getMentionsTimeline().poll();
+        std::list<nlohmann::json> newNotifs = mentions.poll(connection);
 
-        for (const twitter::tweet& tweet : newTweets)
+        for (const nlohmann::json& notif : newNotifs)
         {
-          auto createdTime =
-            std::chrono::system_clock::from_time_t(tweet.getCreatedAt());
-
           if (
-            // Ignore tweets from before the bot started up
-            createdTime > startedTime
+            notif["type"].get<std::string>() == "mention"
             // Ignore retweets
-            && !tweet.isRetweet()
-            // Ignore tweets from yourself
-            && tweet.getAuthor() != client.getUser())
+            && notif["status"]["reblog"].is_null())
           {
-            std::string doc = tweet.generateReplyPrefill(client.getUser());
-            doc += kgramstats.randomSentence(140 - doc.length(), rng);
-            doc.resize(140);
+            std::string doc = "@" + notif["status"]["account"]["acct"].get<std::string>() + " ";
+            doc += kgramstats.randomSentence(500 - doc.length(), rng);
+            doc.resize(500);
 
-            postQueue.emplace_back(std::move(doc), true, tweet.getID());
+            postQueue.emplace_back(std::move(doc), true, notif["status"]["id"]);
           }
         }
-      } catch (const twitter::rate_limit_exceeded&)
-      {
-        // Wait out the rate limit (10 minutes here and 5 below = 15).
-        pollTimer += std::chrono::minutes(10);
-      } catch (const twitter::twitter_error& e)
+      } catch (const std::exception& e)
       {
         std::cout << "Twitter error while polling: " << e.what() << std::endl;
+        // Wait out the rate limit (10 minutes here and 5 below = 15).
+        pollTimer += std::chrono::minutes(10);
       }
 
       pollTimer += std::chrono::minutes(POLL_TIMEOUT);
@@ -145,21 +135,26 @@ int main(int argc, char** args)
 
     if ((currentTime >= queueTimer) && (!postQueue.empty()))
     {
-      auto post = postQueue.front();
+      auto [result, isReply, replyTo] = postQueue.front();
       postQueue.pop_front();
 
-      try
+      mastodonpp::parametermap parameters{{"status", result}};
+      if (isReply) {
+        parameters["in_reply_to_id"] = replyTo;
+      }
+
+      auto answer{connection.post(mastodonpp::API::v1::statuses, parameters)};
+      if (!answer)
       {
-        if (std::get<1>(post))
+        if (answer.curl_error_code == 0)
         {
-          client.replyToTweet(std::get<0>(post), std::get<2>(post));
-        } else {
-          client.updateStatus(std::get<0>(post));
+          std::cout << "HTTP status: " << answer.http_status << std::endl;
         }
-      } catch (const twitter::twitter_error& error)
-      {
-        std::cout << "Twitter error while tweeting: " << error.what()
-          << std::endl;
+        else
+        {
+          std::cout << "libcurl error " << std::to_string(answer.curl_error_code)
+               << ": " << answer.error_message << std::endl;
+        }
       }
 
       queueTimer = currentTime + std::chrono::minutes(QUEUE_TIMEOUT);
